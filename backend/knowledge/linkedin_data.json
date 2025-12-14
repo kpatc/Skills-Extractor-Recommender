@@ -1,0 +1,120 @@
+{
+  "personal_info": {
+    "name": "KPATCHA ESSOHANAM JOSUE",
+    "title": "From Data to AI: Engineering Smart Software Systems",
+    "email": "josuekpatcha1@gmail.com",
+    "phone": "+212 710 84 81 11",
+    "location": "Al Hoceima, Morocco",
+    "linkedin": "https://www.linkedin.com/in/josuekpatcha/"
+  },
+  "summary": "Final-year engineering student in Software & Data Engineering, passionate about turning data into intelligent and scalable systems. I work across the stack—from building modern data platforms and reliable pipelines to deploying ML models and designing robust software backends. My focus lies in system design, data modeling, and delivering real-world AI-powered solutions that perform and scale",
+  "experience": [
+	{
+      "company": "3D SMART FACTORY",
+      "title": "Machine Learning Intern",
+      "duration": "Juin 2024 - August 2024",
+      "location": "Mohamedia, Morocco",
+      "responsibilities": ["Developed advanced 3D segmentation models (3DUnet, 3DUnetKAN) using deep learning for MRI brain tissue segmentation.", "Enhanced U-Net architecture with Kolmogorov-Arnold Networks (KAN), incorporating convolutional layers, batch normalization, and dropout for improved segmentation accuracy"],
+      "skills_used": ["Image Segmentation","Deep Learning", "PyTorch","Konglomorov Arnauld Networks"]
+    },
+    {
+      "company": "ISICOD",
+      "title": "AI Web Developer Intern",
+      "duration": "Juin 2025 - Septembre 2025",
+      "location": "Rabat, Morocco",
+      "responsibilities": ["Developed a cross-platform desktop, web, and mobile application for fingerprint classification and ridge counting, leveraging advanced CNN architectures and integrating Interactive Reinforcement Learning (IRL) to enable dynamic, user-centric model improvement through human feedback", 
+      						"Implemented an incremental human-in-the-loop learning pipeline that adapts model predictions in real time based on validated user corrections, ensuring continuous accuracy gains and robust class representation for fingerprint analysis using Python, PyTorch, and Flask"],
+      "skills_used": ["Computer vision", "PyTorch","IRL","Backend (Flask)","Frontend (React)"]
+    }
+	
+  ],
+  "education": [
+    {
+      "school": "École Nationale des Sciences Appliquées d'Al Hoceima",
+      "degree": "Engineer's degree",
+      "field": "Data Engineering",
+      "graduation_year": "2026"
+    }
+  ],
+  "skills": ["Python","Java","SQL","RELATIONNAL DATABASES(ORACLE,MYSQL,POSTGRESQL,MSSQL)","NOSQL(MONGODB,REDIS,NEO4J)", "Data Engineering","Data Plateforms(Warehouse, Lake)", "Data Modeling (OLTP,OLAP)","Data Transformation (dbt,Spark,Flink)","Orchestration (Airflow, databricks workflow)","Ingestion(kafka,Airbyte)","Distributed Systems (Hadoop Ecosystem)","Machine Learning","NLP","llms","RAG","Agentic(Langchain,Langgraph,CrewAI)","Backend(Spring Boot,FastAPI,Flask)","Frontend(html+css,javascript+react)","AWS SERVICES","IBM CLOUD","GCP(BigQuery)","Databricks","Problem solving","organized","oriented-goal"],
+  "certifications": [
+
+	  {
+		"name": "Introduction to Docker",
+		"issuer": "datascientist.fr",
+		"date": "2025"
+	  },
+	  {
+		"name": "AWS Technical Essentials",
+		"issuer": "Amazon Web Services (AWS)",
+		"date": "2025"
+	  },
+	  {
+		"name": "Neo4j Certified Professional",
+		"issuer": "Neo4j",
+		"date": "2025"
+	  },
+	  {
+		"name": "Python Project for Data Engineering",
+		"issuer": "Coursera",
+		"date": "2023"
+	  },
+	  {
+		"name": "ETL and Data Pipelines with Shell, Airflow and Kafka",
+		"issuer": "IBM",
+		"date": "2023"
+	  },
+	  {
+		"name": "Intermediate to Machine Learning",
+		"issuer": "Kaggle",
+		"date": "2023"
+	  },
+	  {
+		"name": "Intro to Machine Learning",
+		"issuer": "Kaggle",
+		"date": "2023"
+	  },
+	  {
+		"name": "Nettoyez et analysez votre jeu de données",
+		"issuer": "OpenClassrooms",
+		"date": "2023"
+	  },
+	  {
+		"name": "Découvrez les librairies Python pour la Data Science",
+		"issuer": "OpenClassrooms",
+		"date": "2023"
+	  },
+	  {
+		"name": "Implémentez vos bases de données relationnelles avec SQL",
+		"issuer": "OpenClassrooms",
+		"date": "2023"
+	  },
+	  {
+		"name": "Maîtrisez les bases de données NoSQL",
+		"issuer": "OpenClassrooms",
+		"date": "2023"
+	  },
+	  {
+		"name": "Modélisez vos bases de données",
+		"issuer": "OpenClassrooms",
+		"date": "2023"
+	  },
+	  {
+		"name": "Requêtez une base de données avec SQL",
+		"issuer": "OpenClassrooms",
+		"date": "2023"
+	  }
+  ],
+    "projects": [
+   {
+      "name": "DATA ANNOTATION MANAGEMENT PLATFORM",
+      "description": "Developed an AI-driven platform to streamline data annotation processes, enabling efficient task management, progress tracking, and accurate dataset generation for machine learning projects. Designed and implemented user-friendly features like annotation assignments, real-time progress monitoring, and automated quality control to ensure consistent and reliable annotations. Integrated advanced data workflows to optimize model training pipelines for AI applications, reducing dataset preparation time and enhancing overall project scalability.",
+      "technologies": ["Spring Boot", "Spring Security", "Spring Data", "React.js", "shadcn", "FastAPI", "Axios", "Data Structures", "Algorithm Development"]
+    },
+    {
+      "name": "MongoDB_Shared Project",
+      "description": "This project leverages modern technologies to create a scalable, efficient, and robust system for real-time data processing and user interaction. It integrates multiple services and tools to fetch, process, store, and display data seamlessly. Frontend: Interactive and user-friendly interface built with React.js. Backend: FastAPI-based backend for handling API requests. Real-Time Data Processing: Fetches posts and comments from the Reddit API. Streams and processes data efficiently using Apache Kafka. Caching: Redis caching for ultra-fast data retrieval. Database: MongoDB with a shared architecture for horizontal scalability and high availability.",
+      "technologies": ["MongoDB", "Reddis", "docker", "React.js", "FastAPI", "Apache Kafka", "Distributed Systems"]
+    }
+  ]
+}

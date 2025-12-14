@@ -1,0 +1,72 @@
+---
+analyze_professional_data_from_json:
+  description: "Read the professional data from the JSON file at {linkedin_data_file}
+    and extract comprehensive information including:\n- Work experience (company names,
+    job titles, dates, responsibilities, achievements)\n- Education (schools, degrees,
+    graduation dates, relevant coursework)  \n- Licenses and certifications (names,
+    issuing organizations, dates)\n- Skills (technical and soft skills)\n- Projects
+    (names, descriptions, technologies used, outcomes)\n- Professional summary/about
+    section\n- Any other relevant professional information\n\nAnalyze this information
+    in the context of the job description {job_description} and identify the most
+    relevant qualifications, experiences, and skills that match the job requirements.
+    Organize this information in a structured format that highlights the candidate's
+    strengths for this specific role."
+  expected_output: A comprehensive analysis report containing all professional information
+    from the JSON file, organized by relevance to the job description with sections
+    for Experience, Education, Certifications, Skills, and Projects, emphasizing the
+    most applicable qualifications for the target role.
+  agent: professional_data_analyzer
+extract_github_technical_data:
+  description: |-
+    Analyze the GitHub profile at {github_profile_url} and extract comprehensive technical information. 
+    
+    IMPORTANT: Use specific strategies to extract real repository information:
+    1. Access repositories directly using URLs like: https://github.com/kpatc/REPOSITORY_NAME
+    2. Access README files using raw URLs like: https://raw.githubusercontent.com/kpatc/REPOSITORY_NAME/main/README.md
+    3. Look for repository descriptions, programming languages, and project details
+    4. Focus on extracting actual project content, not navigation elements
+    
+    Extract information including:
+    - Repository names and their descriptions
+    - Programming languages used in each project
+    - Technologies and frameworks mentioned in README files
+    - Project objectives, features, and implementation details
+    - Notable achievements or metrics from projects
+    
+    Present the information in a structured format with:
+    - List of repositories with descriptions
+    - Programming languages and technologies used
+    - Detailed project information from README files
+    - Technical skills demonstrated across projects
+  expected_output: A detailed technical portfolio report containing actual GitHub repository
+    information with project descriptions, technologies used, programming languages,
+    and technical skills clearly documented. Avoid including navigation content or
+    generic GitHub interface elements.
+  agent: github_profile_data_extractor
+generate_personalized_cv:
+  description: |-
+    Using the extracted LinkedIn professional data and GitHub technical data, analyze the provided job description {job_description} and create a personalized CV in markdown format that:
+
+    1. Analyzes the job requirements and identifies key skills, qualifications, and experience needed
+    2. Strategically selects the most relevant information from both LinkedIn and GitHub data
+    3. Structures the CV with appropriate sections (Contact, Professional Summary, Experience, Education, Technical Skills, Projects, Certifications)
+    4. Uses action verbs and quantifies achievements where possible
+    5. Ensures ATS compatibility while maintaining professional appearance
+    
+    IMPORTANT REQUIREMENTS:
+    - Select ONLY THE 3 MOST RELEVANT projects from GitHub that align with the job requirements
+    - Do NOT include GitHub repository URLs or links
+    - Only mention technical skills that are actually demonstrated in the projects or experience
+    - Focus on quality over quantity - better to have fewer, more relevant items
+    - Ensure each project description shows clear value and technical depth
+    
+    The CV should be well-formatted, professional, and tailored specifically to increase the chances of getting an interview for this particular role.
+  expected_output: A complete, professionally formatted CV in markdown format that
+    is specifically tailored to the provided job description, incorporating the most
+    relevant information from both LinkedIn and GitHub profiles. Contains exactly 3
+    relevant GitHub projects without URLs, accurate technical skills, and compelling
+    project descriptions.
+  agent: cv_personalization_specialist
+  context:
+  - analyze_professional_data_from_json
+  - extract_github_technical_data
