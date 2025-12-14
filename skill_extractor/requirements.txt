@@ -8,3 +8,6 @@ torch
 pandas
 pytest
 hdbscan
+google-generativeai
+selenium
+webdriver-manager

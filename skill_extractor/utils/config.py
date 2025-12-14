@@ -72,10 +72,11 @@ TECH_SKILLS = {
 
 # === Paramètres NLP ===
 NLP_CONFIG = {
-    "model_name": "sentence-transformers/multilingual-MiniLM-L12-v2",
+    "model_name": "all-MiniLM-L6-v2",  # Modèle léger sans connexion requise
     "language": "fr",  # français
     "remove_stopwords": True,
     "lemmatization": True,
+    "use_semantic_extraction": False,  # Désactiver pour mode test - problème de connexion
 }
 
 # === Paramètres clustering ===

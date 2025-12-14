@@ -6,16 +6,20 @@ Orchestration complète: Scraping → NLP → Clustering → Recommandation.
 import logging
 import json
 import csv
+import sys
 from typing import Dict, List, Optional
 from pathlib import Path
 from datetime import datetime
 
-from skill_extractor.scrapping.scraper import scrape_all_sources
-from skill_extractor.nlp.text_cleaner import clean_offers_pipeline
-from skill_extractor.nlp.skills_extractor import extract_skills_pipeline
-from skill_extractor.modelling.clustering import cluster_offers
-from skill_extractor.recommendtion.recommender import generate_recommendations_pipeline
-from skill_extractor.utils.config import RAW_DATA_DIR, PROCESSED_DATA_DIR, JOB_OFFERS_RAW, JOB_OFFERS_CLEANED
+# Ajouter le répertoire courant au path
+sys.path.insert(0, str(Path(__file__).parent.absolute()))
+
+from scrapping.scraper import scrape_all_sources
+from nlp.text_cleaner import clean_offers_pipeline
+from nlp.skills_extractor import extract_skills_pipeline
+from modelling.clustering import cluster_offers
+from recommendtion.recommender import generate_recommendations_pipeline
+from utils.config import RAW_DATA_DIR, PROCESSED_DATA_DIR, JOB_OFFERS_RAW, JOB_OFFERS_CLEANED
 
 # Configuration logging
 logging.basicConfig(
@@ -97,7 +101,9 @@ class SkillExtractionPipeline:
     def _scrape_step(self) -> List[Dict]:
         """Étape 1: Scraping."""
         logger.info("Récupération des offres d'emploi...")
-        offers = scrape_all_sources(test_mode=self.test_mode)
+        # Minimum 200 offres en production, 50 en test
+        min_offers = 50 if self.test_mode else 200
+        offers = scrape_all_sources(test_mode=self.test_mode, min_offers=min_offers)
         logger.info(f"✓ {len(offers)} offres récupérées")
 
         # Sauvegarder les données brutes

@@ -34,7 +34,7 @@ def download_spacy_models():
 
 def create_data_directories():
     """Crée les répertoires de données s'ils n'existent pas."""
-    from skill_extractor.utils.config import RAW_DATA_DIR, PROCESSED_DATA_DIR, MODELS_DIR
+    from utils.config import RAW_DATA_DIR, PROCESSED_DATA_DIR, MODELS_DIR
 
     for directory in [RAW_DATA_DIR, PROCESSED_DATA_DIR, MODELS_DIR]:
         directory.mkdir(parents=True, exist_ok=True)

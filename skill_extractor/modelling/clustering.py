@@ -3,12 +3,15 @@ Module de vectorisation et clustering des offres d'emploi.
 """
 
 import logging
+import sys
 from typing import List, Dict, Tuple, Optional
-import numpy as np
 from pathlib import Path
 import pickle
+import numpy as np
 
-from ..utils.config import CLUSTERING_CONFIG, MODELS_DIR
+sys.path.insert(0, str(Path(__file__).parent.parent.absolute()))
+from utils.config import CLUSTERING_CONFIG, MODELS_DIR
+from modelling.embeddings import HybridEmbedder
 
 logger = logging.getLogger(__name__)
 
@@ -16,22 +19,17 @@ logger = logging.getLogger(__name__)
 class SkillsVectorizer:
     """Vectorise les offres basées sur les compétences extraites."""
 
-    def __init__(self):
-        """Initialise le vectoriseur."""
-        try:
-            from sentence_transformers import SentenceTransformer
-            self.model = SentenceTransformer("sentence-transformers/multilingual-MiniLM-L12-v2")
-            self.vectorizer_type = "sentence_transformers"
-        except ImportError:
-            logger.warning(
-                "sentence-transformers non disponible. "
-                "Utilisation de vectorisation basique par TF-IDF."
-            )
-            from sklearn.feature_extraction.text import TfidfVectorizer
-            self.model = TfidfVectorizer(max_features=1000)
-            self.vectorizer_type = "tfidf"
-
+    def __init__(self, use_gemini: bool = False):
+        """
+        Initialise le vectoriseur.
+        
+        Args:
+            use_gemini: Si True, essaie d'utiliser Gemini API
+        """
+        self.embedder = HybridEmbedder()
+        self.vectorizer_type = self.embedder.get_method()
         self.embeddings = None
+        logger.info(f"✓ Vectorizer initialisé avec {self.vectorizer_type}")
 
     def vectorize_descriptions(self, offers: List[Dict]) -> np.ndarray:
         """
@@ -50,16 +48,10 @@ class SkillsVectorizer:
             text = offer.get("description_cleaned", offer.get("description", ""))
             descriptions.append(text)
 
-        if self.vectorizer_type == "sentence_transformers":
-            logger.info(f"Vectorisation de {len(descriptions)} descriptions...")
-            embeddings = self.model.encode(descriptions, show_progress_bar=True)
-            self.embeddings = embeddings
-            return embeddings
-        else:
-            logger.info(f"Vectorisation TF-IDF de {len(descriptions)} descriptions...")
-            embeddings = self.model.fit_transform(descriptions).toarray()
-            self.embeddings = embeddings
-            return embeddings
+        logger.info(f"Vectorisation de {len(descriptions)} descriptions...")
+        embeddings = self.embedder.encode(descriptions)
+        self.embeddings = embeddings
+        return embeddings
 
     def vectorize_skills(self, offers: List[Dict]) -> np.ndarray:
         """

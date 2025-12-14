@@ -4,11 +4,14 @@ Module NLP pour le nettoyage et la préparation des textes.
 
 import re
 import logging
+import sys
 from typing import List, Dict, Tuple
+from pathlib import Path
 import spacy
 from bs4 import BeautifulSoup
 
-from ..utils.config import NLP_CONFIG
+sys.path.insert(0, str(Path(__file__).parent.parent.absolute()))
+from utils.config import NLP_CONFIG
 
 logger = logging.getLogger(__name__)
 

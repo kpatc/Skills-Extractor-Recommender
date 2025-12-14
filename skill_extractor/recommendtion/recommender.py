@@ -3,10 +3,13 @@ Module de recommandation de compétences.
 """
 
 import logging
+import sys
 from typing import List, Dict, Tuple
+from pathlib import Path
 from collections import Counter
 
-from ..utils.config import STUDENT_PROFILES, TECH_SKILLS
+sys.path.insert(0, str(Path(__file__).parent.parent.absolute()))
+from utils.config import STUDENT_PROFILES, TECH_SKILLS
 
 logger = logging.getLogger(__name__)
 

@@ -5,11 +5,14 @@ Combine : dictionnaire de compétences + extraction sémantique.
 
 import re
 import logging
+import sys
 from typing import List, Dict, Set, Tuple
+from pathlib import Path
 from collections import Counter
 import spacy
 
-from ..utils.config import TECH_SKILLS, NLP_CONFIG
+sys.path.insert(0, str(Path(__file__).parent.parent.absolute()))
+from utils.config import TECH_SKILLS, NLP_CONFIG
 
 logger = logging.getLogger(__name__)
 
@@ -90,7 +93,8 @@ class SkillExtractor:
 
     def extract_skills_regex(self, text: str) -> Set[str]:
         """
-        Extraction basée sur regex et dictionnaire exact.
+        Extraction agressive basée sur regex pour IT skills.
+        Détecte même les formes tronquées et variations.
         
         Args:
             text: Texte à analyser
@@ -100,17 +104,137 @@ class SkillExtractor:
         """
         text_lower = text.lower()
         found_skills = set()
-
-        # Parcourir toutes les compétences
+        
+        # Regex patterns spécifiques pour les technologies populaires
+        patterns = {
+            # Langages de programmation
+            "python": r"\bpython[\d\.]*\b|py\b|py[\d\.]*\b",
+            "javascript": r"\bjavascript\b|js\b|nodejs|node\.js|es[\d]+\b",
+            "typescript": r"\btypescript\b|ts\b",
+            "java": r"\bjava[\d\.]*\b(?!script)",
+            "golang": r"\bgolang\b|\bgo\b(?!\s+to)(?!\s+for)",
+            "rust": r"\brust\b",
+            "c\+\+": r"\bc\+\+\b|cpp\b",
+            "c#": r"\bc#\b|csharp\b",
+            "php": r"\bphp[\d\.]*\b",
+            "ruby": r"\bruby[\d\.]*\b|rails\b",
+            "swift": r"\bswift\b",
+            "kotlin": r"\bkotlin\b",
+            "scala": r"\bscala\b",
+            "r": r"\br\b(?=\s|[^a-z])",
+            
+            # Frameworks Web & Backend
+            "react": r"\breact\b|reactjs|react\.js",
+            "vue": r"\bvue\.?js\b|vuejs|vue\b",
+            "angular": r"\bangular[\d\.]*\b|angularjs",
+            "django": r"\bdjango\b|django[\d\.]*\b",
+            "flask": r"\bflask\b",
+            "fastapi": r"\bfastapi\b|fast-api",
+            "spring": r"\bspring\b|spring\s+boot\b|spring-boot",
+            "express": r"\bexpress\b|express\.js",
+            "next": r"\bnext\.js\b|nextjs\b",
+            "nuxt": r"\bnuxt\.js\b|nuxtjs\b",
+            "ember": r"\bember\.js\b|emberjs",
+            "svelte": r"\bsvelte\b",
+            
+            # Databases
+            "postgresql": r"\bpostgres(?:ql)?\b|postgres\b|psql\b",
+            "mysql": r"\bmysql\b|mariadb\b",
+            "mongodb": r"\bmongo(?:db)?\b",
+            "redis": r"\bredis\b",
+            "elasticsearch": r"\belasticsearch\b|elastic\b",
+            "cassandra": r"\bcassandra\b",
+            "dynamodb": r"\bdynamodb\b",
+            "firebase": r"\bfirebase\b",
+            "sql": r"\bsql\b|t-sql|pl-sql",
+            
+            # Cloud & DevOps
+            "aws": r"\baws\b|amazon\s+web\s+services",
+            "gcp": r"\bgcp\b|google\s+cloud|cloud\.google",
+            "azure": r"\bazure\b|microsoft\s+azure",
+            "docker": r"\bdocker\b",
+            "kubernetes": r"\bkubernetes\b|k8s\b",
+            "jenkins": r"\bjenkins\b",
+            "gitlab": r"\bgitlab\b",
+            "github": r"\bgithub\b",
+            "terraform": r"\bterraform\b",
+            "ansible": r"\bansible\b",
+            "ci/cd": r"\bci[/-]cd\b|continuous\s+integration",
+            "devops": r"\bdevops\b",
+            
+            # Data & ML
+            "machine learning": r"\bmachine\s+learning\b|ml\b(?!\s+degrees?)",
+            "deep learning": r"\bdeep\s+learning\b",
+            "tensorflow": r"\btensorflow\b",
+            "pytorch": r"\bpytorch\b|torch\b",
+            "pandas": r"\bpandas\b",
+            "numpy": r"\bnumpy\b",
+            "scikit-learn": r"\bscikit-learn\b|sklearn\b",
+            "spark": r"\bapache\s+spark\b|spark\b",
+            "hadoop": r"\bhadoop\b",
+            "ai": r"\b(?:artificial\s+)?intelligence\b|\bai\b",
+            
+            # APIs & Architectures
+            "rest api": r"\brest\s+(?:api|apis)\b|restful",
+            "graphql": r"\bgraphql\b",
+            "grpc": r"\bgrpc\b",
+            "soap": r"\bsoap\b",
+            "microservices": r"\bmicroservices\b|micro-services",
+            "serverless": r"\bserverless\b",
+            "lambda": r"\baws\s+lambda\b|lambda\s+function",
+            
+            # Frontend & Mobile
+            "html": r"\bhtml[\d]?\b",
+            "css": r"\bcss[\d]?\b|scss\b|sass\b|less\b",
+            "bootstrap": r"\bbootstrap\b",
+            "material": r"\bmaterial\s+design\b|material-ui",
+            "react native": r"\breact\s+native\b",
+            "flutter": r"\bflutter\b",
+            "android": r"\bandroid\b",
+            "ios": r"\bios\b",
+            
+            # Other tech
+            "git": r"\bgit\b",
+            "linux": r"\blinux\b",
+            "windows": r"\bwindows\b",
+            "unix": r"\bunix\b",
+            "shell": r"\bshell\b|bash\b|zsh\b",
+            "json": r"\bjson\b",
+            "xml": r"\bxml\b",
+            "yaml": r"\byaml\b",
+            "http": r"\bhttps?\b",
+            "websocket": r"\bwebsocket\b|websockets",
+            "agile": r"\bagile\b",
+            "scrum": r"\bscrum\b",
+            "kanban": r"\bkanban\b",
+            "testing": r"\b(?:unit\s+)?testing\b|test\s+driven",
+            "junit": r"\bjunit\b",
+            "pytest": r"\bpytest\b",
+            "selenium": r"\bselenium\b",
+            "docker compose": r"\bdocker-compose\b|docker\s+compose",
+            "git": r"\bgit\b|github\b",
+            "npm": r"\bnpm\b",
+            "yarn": r"\byarn\b",
+            "pip": r"\bpip\b",
+            "virtualenv": r"\bvirtualenv\b|venv\b",
+            "conda": r"\bconda\b",
+            "vim": r"\bvim\b",
+            "vs code": r"\bvs\s+code\b|vscode\b",
+            "intellij": r"\bintellij\b|idea\b",
+        }
+        
+        for skill, pattern in patterns.items():
+            if re.search(pattern, text_lower, re.IGNORECASE):
+                found_skills.add(skill)
+        
+        # Parcourir aussi le dictionnaire exact
         for category, skills in self.skill_dict.items():
             for skill in skills:
-                # Pattern regex: mots limites pour éviter faux positifs
                 pattern = r"\b" + re.escape(skill) + r"\b"
-                if re.search(pattern, text_lower):
-                    # Retourner la forme canonique (sans tirets/variations)
+                if re.search(pattern, text_lower, re.IGNORECASE):
                     canonical = skill.replace("-", " ").lower()
                     found_skills.add(canonical)
-
+        
         return found_skills
 
     def extract_skills_spacy(self, text: str) -> Set[str]:
@@ -201,12 +325,22 @@ class SkillExtractor:
         elif method == "spacy":
             skills = self.extract_skills_spacy(text)
         elif method == "semantic":
-            skills = self.extract_skills_semantic(text)
+            # Vérifier si la méthode sémantique est activée
+            if NLP_CONFIG.get("use_semantic_extraction", True):
+                skills = self.extract_skills_semantic(text)
+            else:
+                logger.debug("Méthode sémantique désactivée, utilisant regex uniquement")
+                skills = self.extract_skills_regex(text)
         else:  # combined
             skills_regex = self.extract_skills_regex(text)
             skills_spacy = self.extract_skills_spacy(text)
-            skills_semantic = self.extract_skills_semantic(text)
-            skills = skills_regex.union(skills_spacy).union(skills_semantic)
+            
+            # Inclure la méthode sémantique seulement si activée
+            if NLP_CONFIG.get("use_semantic_extraction", True):
+                skills_semantic = self.extract_skills_semantic(text)
+                skills = skills_regex.union(skills_spacy).union(skills_semantic)
+            else:
+                skills = skills_regex.union(skills_spacy)
 
         # Catégoriser les compétences trouvées
         categorized = self._categorize_skills(skills)

@@ -1,17 +1,23 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 """
 Script principal d'exécution du pipeline complet.
-Utilisation: python run_pipeline.py [--mode test|prod] [--export all|json|excel|csv]
+Utilisation: python3 run_pipeline.py [--mode test|prod] [--export all|json|excel|csv]
 """
 
 import argparse
 import logging
 import sys
+import os
 from pathlib import Path
 
+# Ajouter le répertoire courant au path pour les imports
+current_dir = Path(__file__).parent.absolute()
+sys.path.insert(0, str(current_dir))
+os.chdir(current_dir)
+
 # Importer le pipeline
-from skill_extractor.pipeline import SkillExtractionPipeline
-from skill_extractor.utils.exporters import ResultsExporter, ResultsVisualizer
+from pipeline import SkillExtractionPipeline
+from utils.exporters import ResultsExporter, ResultsVisualizer
 
 # Configuration logging
 logging.basicConfig(
@@ -30,7 +36,7 @@ def main():
     parser.add_argument(
         "--mode",
         choices=["test", "prod"],
-        default="test",
+        default="prod",
         help="Mode d'exécution (test avec données simulées ou prod avec scraping réel)"
     )
 

@@ -5,11 +5,13 @@ Utilitaires pour l'exportation et visualisation des résultats.
 import json
 import csv
 import logging
+import sys
 from typing import Dict, List, Tuple
 from pathlib import Path
 import pandas as pd
 
-from ..utils.config import PROCESSED_DATA_DIR
+sys.path.insert(0, str(Path(__file__).parent.parent.absolute()))
+from utils.config import PROCESSED_DATA_DIR
 
 logger = logging.getLogger(__name__)
 

@@ -6,14 +6,17 @@ import pytest
 import json
 from pathlib import Path
 from datetime import datetime
+import sys
 
-from skill_extractor.scrapping.scraper import scrape_all_sources, ReKruteScraper
-from skill_extractor.nlp.text_cleaner import TextCleaner, clean_offers_pipeline
-from skill_extractor.nlp.skills_extractor import SkillExtractor, extract_skills_pipeline
-from skill_extractor.modelling.clustering import SkillsVectorizer, OffersClustering
-from skill_extractor.recommendtion.recommender import SkillRecommender
-from skill_extractor.pipeline import SkillExtractionPipeline
-from skill_extractor.utils.config import RAW_DATA_DIR, PROCESSED_DATA_DIR
+sys.path.insert(0, str(Path(__file__).parent))
+
+from scrapping.scraper import scrape_all_sources, ReKruteScraper
+from nlp.text_cleaner import TextCleaner, clean_offers_pipeline
+from nlp.skills_extractor import SkillExtractor, extract_skills_pipeline
+from modelling.clustering import SkillsVectorizer, OffersClustering
+from recommendtion.recommender import SkillRecommender
+from pipeline import SkillExtractionPipeline
+from utils.config import RAW_DATA_DIR, PROCESSED_DATA_DIR
 
 
 # ============================================================================
