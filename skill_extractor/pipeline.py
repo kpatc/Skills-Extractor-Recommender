@@ -16,7 +16,7 @@ sys.path.insert(0, str(Path(__file__).parent.absolute()))
 
 from scrapping.scraper import scrape_all_sources
 from nlp.text_cleaner import clean_offers_pipeline
-from nlp.skills_extractor import extract_skills_pipeline
+from nlp.skills_extractor_advanced import extract_skills_from_offers_advanced
 from modelling.clustering import cluster_offers
 from recommendtion.recommender import generate_recommendations_pipeline
 from utils.config import RAW_DATA_DIR, PROCESSED_DATA_DIR, JOB_OFFERS_RAW, JOB_OFFERS_CLEANED
@@ -63,26 +63,20 @@ class SkillExtractionPipeline:
             logger.info("-" * 80)
             self.offers_raw = self._scrape_step()
 
-            # Étape 2: Nettoyage NLP
-            logger.info("\n[ETAPE 2] NETTOYAGE ET PRETRAITEMENT NLP")
-            logger.info("-" * 80)
-            self.offers_cleaned = self._cleaning_step()
-
-            # Étape 3: Extraction des compétences
-            logger.info("\n[ETAPE 3] EXTRACTION DES COMPETENCES")
+            # Étape 2: Extraction des compétences (directement sur les données brutes)
+            logger.info("\n[ETAPE 2] EXTRACTION DES COMPETENCES AVEC NLP AVANCE")
             logger.info("-" * 80)
             self.offers_with_skills = self._skills_extraction_step()
 
-            # Étape 4: Clustering
-            logger.info("\n[ETAPE 4] VECTORISATION ET CLUSTERING")
+            # Étape 3: Embedding et Clustering
+            logger.info("\n[ETAPE 3] VECTORISATION ET CLUSTERING")
             logger.info("-" * 80)
             self.clustering_result = self._clustering_step()
 
-            # Étape 5: Recommandations (DÉSACTIVÉE POUR LE MOMENT)
-            # logger.info("\n[ETAPE 5] RECOMMANDATIONS PERSONNALISEES")
-            # logger.info("-" * 80)
-            # self.recommendations = self._recommendations_step()
-            self.recommendations = {}
+            # Étape 4: Recommandations
+            logger.info("\n[ETAPE 4] RECOMMANDATIONS PERSONNALISEES")
+            logger.info("-" * 80)
+            self.recommendations = self._recommendations_step()
 
             # Résumé final
             self._print_summary()
@@ -124,15 +118,36 @@ class SkillExtractionPipeline:
         return offers
 
     def _skills_extraction_step(self) -> List[Dict]:
-        """Étape 3: Extraction des compétences."""
-        logger.info("Extraction des compétences techniques...")
-        offers = extract_skills_pipeline(self.offers_cleaned)
-        logger.info(f"✓ Compétences extraites pour {len(offers)} offres")
+        """Étape 3: Extraction des compétences avec NLP avancé."""
+        logger.info("Extraction avancée des compétences techniques...")
+        
+        # Charger les offres brutes (plus d'infos pour l'extraction)
+        offers = self.offers_raw or self._load_raw_offers()
+        
+        # Extraction avec l'extracteur avancé
+        offers_with_skills = extract_skills_from_offers_advanced(offers)
+        logger.info(f"✓ Compétences extraites pour {len(offers_with_skills)} offres")
 
-        # Statistiques
-        self._print_skills_statistics(offers)
+        # Statistiques détaillées
+        offers_with_detected = sum(1 for o in offers_with_skills if o.get('num_skills', 0) > 0)
+        avg_skills = sum(o.get('num_skills', 0) for o in offers_with_skills) / len(offers_with_skills) if offers_with_skills else 0
+        
+        logger.info(f"  - Offres avec compétences détectées: {offers_with_detected}/{len(offers_with_skills)}")
+        logger.info(f"  - Moyenne de compétences par offre: {avg_skills:.1f}")
+        
+        # Top skills
+        from collections import Counter
+        all_skills = []
+        for o in offers_with_skills:
+            all_skills.extend(o.get('skills', []))
+        if all_skills:
+            top_skills = Counter(all_skills).most_common(10)
+            logger.info(f"  - Top 10 compétences: {[s[0] for s in top_skills]}")
 
-        return offers
+        # Sauvegarder les offres avec compétences en JSON
+        self._save_offers_json(offers_with_skills)
+
+        return offers_with_skills
 
     def _clustering_step(self) -> Dict:
         """Étape 4: Clustering."""
@@ -263,6 +278,27 @@ class SkillExtractionPipeline:
             logger.info(f"✓ Recommandations sauvegardées dans {filepath}")
         except Exception as e:
             logger.error(f"Erreur lors de la sauvegarde des recommandations: {e}")
+
+    def _save_offers_json(self, offers: List[Dict]):
+        """Sauvegarde les offres avec compétences en JSON."""
+        try:
+            filepath = PROCESSED_DATA_DIR / "offers_with_skills.json"
+
+            # Préparer les données pour JSON
+            offers_serializable = []
+            for offer in offers:
+                offer_dict = dict(offer)
+                # Convertir les listes en listes normales (au cas où)
+                if "extracted_skills" in offer_dict:
+                    offer_dict["extracted_skills"] = list(offer_dict["extracted_skills"])
+                offers_serializable.append(offer_dict)
+
+            with open(filepath, "w", encoding="utf-8") as f:
+                json.dump(offers_serializable, f, indent=2, ensure_ascii=False)
+
+            logger.info(f"✓ Offres avec compétences sauvegardées dans {filepath}")
+        except Exception as e:
+            logger.error(f"Erreur lors de la sauvegarde JSON: {e}")
 
     @staticmethod
     def _make_serializable(obj):
