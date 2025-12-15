@@ -344,10 +344,10 @@ def scrape_all_sources(test_mode=False, min_offers=200) -> List[Dict]:
         logger.info(f"SCRAPING RÉEL (BeautifulSoup + requests) - {min_offers} offres minimum")
         logger.info(f"{'='*80}\n")
         
-        # 1️⃣ REKRUTE - PRIORITÉ (Maroc, le plus accessible)
-        logger.info("🔄 ReKrute (Maroc) - PRIORITÉ...")
+        # 1️⃣ REKRUTE - PRIORITÉ (Maroc, 30 pages)
+        logger.info("🔄 ReKrute (Maroc) - PRIORITÉ (30 pages)...")
         try:
-            rekrute_offers = scrape_rekrute(num_pages=5)
+            rekrute_offers = scrape_rekrute(num_pages=30)
             if rekrute_offers:
                 all_offers.extend(rekrute_offers)
                 logger.info(f"✅ {len(rekrute_offers)} offres ReKrute\n")
@@ -356,31 +356,31 @@ def scrape_all_sources(test_mode=False, min_offers=200) -> List[Dict]:
         except Exception as e:
             logger.warning(f"❌ Erreur ReKrute: {e}\n")
         
-        # 2️⃣ INDEED.COM - avec JSON extraction (meilleur accès)
+        # 2️⃣ GITHUB JOBS - BeautifulSoup (30 pages)
         if len(all_offers) < min_offers:
-            logger.info("🔄 Indeed.com (International + IT jobs)...")
+            logger.info("🔄 GitHub Careers (30 pages)...")
             try:
-                indeed_offers = scrape_indeed_com(num_pages=5)
-                if indeed_offers:
-                    all_offers.extend(indeed_offers)
-                    logger.info(f"✅ {len(indeed_offers)} offres Indeed.com\n")
+                github_offers = scrape_github_jobs(num_pages=30)
+                if github_offers:
+                    all_offers.extend(github_offers)
+                    logger.info(f"✅ {len(github_offers)} offres GitHub\n")
                 else:
-                    logger.warning("⚠️  0 offres Indeed.com\n")
+                    logger.warning("⚠️  0 offres GitHub\n")
             except Exception as e:
-                logger.warning(f"❌ Erreur Indeed.com: {e}\n")
+                logger.warning(f"❌ Erreur GitHub: {e}\n")
         
-        # 3️⃣ STACK OVERFLOW - fallback
+        # 3️⃣ LINKEDIN JOBS - BeautifulSoup (20 pages)
         if len(all_offers) < min_offers:
-            logger.info("🔄 Stack Overflow Jobs...")
+            logger.info("🔄 LinkedIn Jobs (20 pages)...")
             try:
-                so_offers = scrape_stackoverflow_jobs(num_pages=2)
-                if so_offers:
-                    all_offers.extend(so_offers)
-                    logger.info(f"✅ {len(so_offers)} offres Stack Overflow\n")
+                linkedin_offers = scrape_linkedin_jobs(num_pages=20)
+                if linkedin_offers:
+                    all_offers.extend(linkedin_offers)
+                    logger.info(f"✅ {len(linkedin_offers)} offres LinkedIn\n")
                 else:
-                    logger.warning("⚠️  0 offres Stack Overflow\n")
+                    logger.warning("⚠️  0 offres LinkedIn\n")
             except Exception as e:
-                logger.warning(f"❌ Erreur Stack Overflow: {e}\n")
+                logger.warning(f"❌ Erreur LinkedIn: {e}\n")
 
     logger.info(f"\n{'='*80}")
     logger.info(f"RÉSUMÉ SCRAPING - {len(all_offers)} offres totales")
@@ -406,187 +406,138 @@ def scrape_all_sources(test_mode=False, min_offers=200) -> List[Dict]:
 
 
 
-def scrape_rekrute(num_pages: int = 5) -> List[Dict]:
-    """Scrape ReKrute.com avec BeautifulSoup + requests."""
+def scrape_rekrute(num_pages: int = 10) -> List[Dict]:
+    """Scrape ReKrute.com - avec descriptions complètes des pages individuelles."""
+    import re
+    
     offers = []
     session = requests.Session()
     session.headers.update({
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
     })
     
+    # IT keywords - comprehensive list
+    it_keywords = [
+        'python', 'java', 'javascript', 'developer', 'engineer', 'devops', 'frontend', 'backend',
+        'fullstack', 'react', 'angular', 'nodejs', 'database', 'sql', 'cloud', 'aws', 'azure',
+        'docker', 'kubernetes', 'api', 'software', 'informatique', 'tech', 'programmer', 'data',
+        '.net', 'c#', 'c++', 'rust', 'golang', 'php', 'ruby', 'swift', 'architect', 'security',
+        'machine learning', 'ai', 'data scientist', 'analyst', 'testing', 'qa', 'tester',
+        'mongodb', 'postgresql', 'mysql', 'elasticsearch', 'redis', 'git', 'ci/cd', 'devops',
+        'terraform', 'ansible', 'kafka', 'spark', 'hadoop', 'infrastructure', 'network',
+        'linux', 'windows server', 'scrum', 'agile', 'microservices', 'rest', 'graphql'
+    ]
+    
+    def is_it_job(text: str) -> bool:
+        return sum(1 for kw in it_keywords if kw in text.lower()) >= 1
+    
+    def clean_text(text: str) -> str:
+        if not text:
+            return ""
+        text = re.sub(r'<[^>]+>', '', text)
+        text = re.sub(r'&[a-z]+;', '', text)
+        text = re.sub(r'\s+', ' ', text)
+        return text.strip()
+    
+    seen = set()
+    
     for page in range(1, num_pages + 1):
         try:
             url = f"https://www.rekrute.com/offres.html?page={page}"
-            logger.info(f"  Page {page}: {url}")
+            logger.info(f"  Page {page}")
             
             response = session.get(url, timeout=10)
-            response.raise_for_status()
+            if response.status_code != 200:
+                logger.debug(f"    Status {response.status_code}")
+                continue
             
             soup = BeautifulSoup(response.text, "html.parser")
             
-            # Chercher les liens d'offres
-            offer_links = []
-            
-            # Tous les liens contenant /offre
+            # Chercher tous les liens d'offres: /offre-emploi-*-*.html
+            links_found = 0
             for link in soup.find_all("a", href=True):
                 href = link.get("href", "")
-                if "/offre" in href and href not in offer_links:
-                    offer_links.append(href)
-            
-            logger.info(f"    Trouvé {len(offer_links)} offres")
-            
-            for link in offer_links[:15]:  # Limiter par page
-                try:
-                    # Construire l'URL complète
-                    full_url = link if link.startswith("http") else f"https://www.rekrute.com{link}"
-                    
-                    # Récupérer la page de l'offre
-                    offer_response = session.get(full_url, timeout=10)
-                    offer_response.raise_for_status()
-                    offer_soup = BeautifulSoup(offer_response.text, "html.parser")
-                    
-                    # Titre
-                    title_elem = offer_soup.find(["h1", "h2"])
-                    title = title_elem.get_text(strip=True) if title_elem else "N/A"
-                    
-                    # Entreprise
-                    company = "N/A"
-                    for elem in offer_soup.find_all(["span", "div", "p"]):
-                        text = elem.get_text(strip=True)
-                        if "par " in text.lower() or "entreprise" in text.lower():
-                            company = text.replace("par ", "").replace("Entreprise: ", "").strip()
-                            if len(company) > 50:
-                                company = company[:50]
-                            break
-                    
-                    # Description
-                    desc_elem = offer_soup.find("div", class_=lambda x: x and "description" in (x.lower() if x else ""))
-                    if not desc_elem:
-                        # Chercher le contenu principal
-                        desc_elem = offer_soup.find("div", class_=lambda x: x and "content" in (x.lower() if x else ""))
-                    
-                    description = desc_elem.get_text(strip=True)[:1000] if desc_elem else offer_soup.get_text(strip=True)[:500]
-                    
-                    # Location
-                    location = "Maroc"
-                    for elem in offer_soup.find_all(["span", "div", "p"]):
-                        text = elem.get_text(strip=True)
-                        if any(city in text for city in ["Casablanca", "Rabat", "Fez", "Marrakech", "Tangier"]):
-                            location = text
-                            break
-                    
-                    if title != "N/A" and len(title) > 3:
-                        offers.append({
-                            "job_id": f"rekrute_{len(offers)+1:04d}",
-                            "title": title,
-                            "company": company,
-                            "location": location,
-                            "description": description,
-                            "source": "rekrute",
-                            "scrape_date": datetime.now().isoformat(),
-                        })
-                    
-                    time.sleep(1)  # Délai entre les requêtes
-                    
-                except Exception as e:
-                    logger.debug(f"    Erreur scraping offre: {e}")
+                # Pattern: /offre-emploi-* ou offre-emploi-*
+                if "offre-emploi" not in href or not href.endswith(".html"):
                     continue
-            
-            if offer_links:
-                logger.info(f"    ✓ {len(offer_links)} offres extraites (page {page})")
-            
-            time.sleep(2)
-        except Exception as e:
-            logger.warning(f"  Erreur page {page}: {e}")
-            continue
-    
-    return offers
-
-
-def scrape_rekrute(num_pages: int = 3) -> List[Dict]:
-    """Scrape ReKrute.com avec BeautifulSoup - RAPIDE."""
-    offers = []
-    session = requests.Session()
-    session.headers.update({
-        "User-Agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36"
-    })
-    
-    for page in range(1, num_pages + 1):
-        try:
-            url = f"https://www.rekrute.com/offres.html?page={page}"
-            logger.info(f"  Page {page}: {url}")
-            
-            response = session.get(url, timeout=10)
-            response.raise_for_status()
-            
-            soup = BeautifulSoup(response.text, "html.parser")
-            
-            # Chercher les offres (liens vers /offres/)
-            job_links = []
-            for link in soup.find_all("a", href=True):
-                href = link.get("href", "")
-                if "/offre" in href:
+                
+                links_found += 1
+                title = clean_text(link.get_text())
+                if not title or len(title) < 5:
+                    continue
+                
+                # Éviter doublons
+                if title in seen:
+                    continue
+                seen.add(title)
+                
+                # IT filter sur titre d'abord
+                if not is_it_job(title):
+                    continue
+                
+                # SCRAPER LA PAGE INDIVIDUELLE pour la description complète
+                description = title  # Fallback
+                try:
+                    # Construire URL complète si nécessaire
                     full_url = href if href.startswith("http") else f"https://www.rekrute.com{href}"
-                    job_links.append(full_url)
-            
-            job_links = list(set(job_links))[:15]  # Limite à 15 par page
-            logger.info(f"    Trouvé {len(job_links)} liens")
-            
-            for link in job_links:
-                try:
-                    offer_resp = session.get(link, timeout=8)
-                    offer_soup = BeautifulSoup(offer_resp.text, "html.parser")
+                    job_response = session.get(full_url, timeout=8)
                     
-                    # Titre - chercher h1 ou h2
-                    title = "N/A"
-                    for elem in offer_soup.find_all(["h1", "h2"]):
-                        text = elem.get_text(strip=True)
-                        if 5 < len(text) < 150:
-                            title = text
-                            break
+                    if job_response.status_code == 200:
+                        job_soup = BeautifulSoup(job_response.text, "html.parser")
+                        
+                        # Chercher la description - essayer plusieurs sélecteurs
+                        desc_elem = None
+                        for selector in ["[data-test='description']", ".job-description", ".offer-description", "article", ".content-main"]:
+                            try:
+                                if selector.startswith("["):
+                                    desc_elem = job_soup.select_one(selector)
+                                else:
+                                    desc_elem = job_soup.select_one(selector)
+                                if desc_elem:
+                                    break
+                            except:
+                                pass
+                        
+                        # Si pas trouvé, chercher tous les paragraphes
+                        if not desc_elem:
+                            paragraphs = job_soup.find_all("p")
+                            if paragraphs:
+                                description = clean_text(" ".join([p.get_text() for p in paragraphs]))[:1500]
+                        else:
+                            description = clean_text(desc_elem.get_text())[:1500]
                     
-                    # Entreprise - chercher dans les éléments structurés
-                    company = "N/A"
-                    for elem in offer_soup.find_all(["span", "p", "div"]):
-                        text = elem.get_text(strip=True)
-                        if "entreprise" in text.lower() or "company" in text.lower():
-                            # Prendre le texte suivant
-                            company = text.split(":")[-1].strip() if ":" in text else text
-                            break
+                    # Ensure description has content beyond title
+                    if len(description) <= len(title):
+                        description = title  # Fallback
                     
-                    # Description
-                    description = offer_soup.get_text()[:300]
-                    
-                    # Location
-                    location = "Maroc"
-                    for elem in offer_soup.find_all(["span", "div"]):
-                        text = elem.get_text(strip=True)
-                        if any(city in text for city in ["Casablanca", "Rabat", "Fez", "Marrakech", "Tangier"]):
-                            location = text
-                            break
-                    
-                    if title != "N/A" and len(title) > 5:
-                        offers.append({
-                            "job_id": f"rekrute_{len(offers)+1:04d}",
-                            "title": title,
-                            "company": company,
-                            "location": location,
-                            "description": description,
-                            "source": "rekrute",
-                            "scrape_date": datetime.now().isoformat(),
-                        })
-                    
-                    time.sleep(0.5)
                 except Exception as e:
-                    logger.debug(f"    Erreur offre: {str(e)[:50]}")
+                    logger.debug(f"    Job page error: {str(e)[:30]}")
+                    description = title
+                
+                # Filtrer aussi sur description
+                if not is_it_job(title + " " + description):
                     continue
+                
+                offer = {
+                    "job_id": f"rekrute_{len(offers)+1:04d}",
+                    "title": title,
+                    "company": "ReKrute",
+                    "location": "Maroc",
+                    "description": description,
+                    "source": "rekrute",
+                    "scrape_date": datetime.now().isoformat(),
+                }
+                
+                offers.append(offer)
+                logger.debug(f"    ✓ {title[:50]}")
+                
+                time.sleep(0.2)  # Respecter le serveur
             
-            if offers:
-                logger.info(f"    ✓ {len(offers)} offres")
+            logger.info(f"    Trouvé {links_found} liens, ✓ {len(offers)} offres IT")
+            time.sleep(0.5)
             
-            time.sleep(1)
         except Exception as e:
-            logger.warning(f"  Erreur page {page}: {e}")
+            logger.debug(f"  Error page {page}: {str(e)[:50]}")
             continue
     
     return offers
@@ -666,254 +617,357 @@ def scrape_emploi_ma(num_pages: int = 5) -> List[Dict]:
     return offers
 
 
-def scrape_indeed_com(num_pages: int = 5) -> List[Dict]:
-    """Scrape Indeed.com avec pattern JSON - meilleur accès international."""
-    import re
-    import json
-    
+def scrape_github_jobs(num_pages: int = 10) -> List[Dict]:
+    """Scrape GitHub Careers - github.com/careers avec scraping BeautifulSoup."""
     offers = []
     session = requests.Session()
     session.headers.update({
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36",
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+    })
+    
+    # IT keywords pour filtrer
+    it_keywords = ['python', 'java', 'javascript', 'developer', 'engineer', 'architect', 
+                   'devops', 'cloud', 'backend', 'frontend', 'fullstack', 'senior', 
+                   'lead', 'tech', 'software', 'react', 'node', 'django', 'aws', 'rust', 'copilot']
+    
+    def is_it_job(title, description=""):
+        combined = (title + " " + description).lower()
+        return sum(1 for kw in it_keywords if kw in combined) >= 1
+    
+    def clean_text(text):
+        """Remove HTML tags and entities."""
+        import re
+        text = re.sub(r'<[^>]+>', '', text or '')
+        text = re.sub(r'&[a-z]+;', '', text)
+        text = re.sub(r'\s+', ' ', text)
+        return text.strip()
+    
+    # GitHub Careers - scraper avec BeautifulSoup
+    try:
+        url = "https://github.com/careers/home/jobs"
+        logger.info(f"  GitHub Careers: {url}")
+        
+        response = session.get(url, timeout=15)
+        if response.status_code != 200:
+            logger.debug(f"    Status {response.status_code}")
+            return offers
+        
+        soup = BeautifulSoup(response.text, "html.parser")
+        
+        # Chercher les job cards (structure peut varier)
+        # Essayer plusieurs selectors possibles
+        job_elements = soup.find_all("a", {"data-test": "job-list-item"})
+        if not job_elements:
+            job_elements = soup.find_all("div", class_=lambda x: x and "job" in (x if x else "").lower())
+        
+        logger.info(f"    Trouvé {len(job_elements)} éléments job")
+        
+        for elem in job_elements[:num_pages * 10]:  # Limiter
+            try:
+                # Extraire titre
+                title_elem = elem.find("h2") or elem.find("h3") or elem.find(class_=lambda x: x and "title" in (x if x else "").lower())
+                title = title_elem.get_text(strip=True) if title_elem else ""
+                
+                if not title or len(title) < 3:
+                    continue
+                
+                # Filtrer sur titre d'abord
+                if not is_it_job(title):
+                    continue
+                
+                # Extraire entreprise
+                company_elem = elem.find(class_=lambda x: x and "company" in (x if x else "").lower())
+                company = company_elem.get_text(strip=True) if company_elem else "GitHub"
+                
+                # Extraire location
+                location_elem = elem.find(class_=lambda x: x and "location" in (x if x else "").lower())
+                location = location_elem.get_text(strip=True) if location_elem else "Remote"
+                
+                # Extraire description si disponible
+                description = ""
+                desc_elem = elem.find("p")
+                if desc_elem:
+                    description = clean_text(desc_elem.get_text())
+                
+                # Si pas de description en texte, prendre le texte entier
+                if not description:
+                    description = clean_text(elem.get_text())[:500]
+                
+                # Filtrer aussi sur description
+                if description and not is_it_job(title, description):
+                    continue
+                
+                offer = {
+                    "job_id": f"github_{len(offers):04d}",
+                    "title": title,
+                    "company": company,
+                    "location": location,
+                    "description": description[:800],
+                    "source": "github.com",
+                    "scrape_date": datetime.now().isoformat(),
+                }
+                
+                offers.append(offer)
+                logger.debug(f"    ✓ {title[:50]}")
+                
+            except Exception as e:
+                logger.debug(f"    Element error: {str(e)[:30]}")
+                continue
+        
+        time.sleep(1)
+    except Exception as e:
+        logger.debug(f"  Error: {str(e)[:50]}")
+    
+    logger.info(f"  ✓ GitHub: {len(offers)} offres IT extraites")
+    return offers
+
+
+def scrape_linkedin_jobs(num_pages: int = 20) -> List[Dict]:
+    """Scrape LinkedIn Jobs - linkedin.com/jobs avec BeautifulSoup."""
+    offers = []
+    session = requests.Session()
+    session.headers.update({
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
         "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
         "Accept-Language": "en-US,en;q=0.9",
     })
     
-    # Chercher les offres IT
-    keywords = ["software engineer", "python developer", "backend developer", "devops engineer", "cloud architect"]
+    # IT keywords pour filtrer
+    it_keywords = ['python', 'java', 'javascript', 'developer', 'engineer', 'architect', 
+                   'devops', 'cloud', 'backend', 'frontend', 'fullstack', 'senior', 
+                   'lead', 'tech', 'software', 'react', 'node', 'django', 'aws', 'rust', 'data']
     
-    for keyword in keywords:
-        if len(offers) >= 150:
-            break
-            
-        for page in range(num_pages):
-            try:
-                offset = page * 10
-                url = f"https://www.indeed.com/jobs?q={keyword.replace(' ', '+')}&start={offset}"
-                logger.info(f"  {keyword} page {page+1}: {url}")
-                
-                response = session.get(url, timeout=15)
-                response.raise_for_status()
-                
-                # Extraction du JSON comme le spider Scrapy
-                script_tag = re.findall(
-                    r'window.mosaic.providerData\["mosaic-provider-jobcards"\]=(\{.+?\});',
-                    response.text
-                )
-                
-                if script_tag:
-                    try:
-                        json_blob = json.loads(script_tag[0])
-                        jobs_list = json_blob['metaData']['mosaicProviderJobCardsModel']['results']
-                        logger.info(f"    Trouvé {len(jobs_list)} offres")
-                        
-                        for job in jobs_list:
-                            try:
-                                title = job.get('title', 'N/A')
-                                company = job.get('company', 'N/A')
-                                
-                                # Filtrer pour IT uniquement
-                                if not any(it_keyword in title.lower() for it_keyword in ['engineer', 'developer', 'architect', 'devops', 'cloud', 'senior', 'lead', 'tech']):
-                                    continue
-                                
-                                offer = {
-                                    "job_id": f"indeed_com_{job.get('jobkey', f'job_{len(offers)}')[:20]}",
-                                    "title": title,
-                                    "company": company,
-                                    "location": f"{job.get('jobLocationCity', '')}, {job.get('jobLocationState', '')}".strip(', '),
-                                    "description": job.get('snippet', '')[:500],
-                                    "source": "indeed.com",
-                                    "scrape_date": datetime.now().isoformat(),
-                                }
-                                
-                                if offer['title'] != 'N/A' and len(offer['title']) > 3:
-                                    offers.append(offer)
-                            except Exception as e:
-                                logger.debug(f"    Erreur: {e}")
-                                continue
-                        
-                        if offers:
-                            logger.info(f"    ✓ {len(offers)} offres total")
-                        
-                    except json.JSONDecodeError as e:
-                        logger.warning(f"    Erreur JSON: {e}")
-                else:
-                    logger.warning(f"    Pas de JSON trouvé")
-                
-                time.sleep(2)
-            except Exception as e:
-                logger.warning(f"  Erreur {keyword} page {page+1}: {e}")
-                continue
+    def is_it_job(title, description=""):
+        combined = (title + " " + description).lower()
+        return sum(1 for kw in it_keywords if kw in combined) >= 1
     
-    return offers
-
-
-def scrape_indeed_fr(num_pages: int = 5) -> List[Dict]:
-    """
-    Scrape Indeed (en.indeed.com + fr.indeed.com) avec extraction JSON.
-    Basé sur le spider Scrapy scrap_base/indeed/.
-    Recherche: IT jobs (developer, engineer, architect, etc.)
-    """
-    import re
-    import json
+    def clean_text(text):
+        """Remove HTML tags and entities."""
+        import re
+        text = re.sub(r'<[^>]+>', '', text or '')
+        text = re.sub(r'&[a-z]+;', '', text)
+        text = re.sub(r'\s+', ' ', text)
+        return text.strip()
     
-    offers = []
-    session = requests.Session()
-    session.headers.update({
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/*,*/*;q=0.8",
-        "Accept-Language": "en-US,en;q=0.9",
-        "Referer": "https://www.indeed.com/",
-        "DNT": "1",
-    })
-    
-    # Keywords IT + locations pour plus de données
-    keywords = [
-        "software developer", "python developer", "senior developer",
-        "backend engineer", "frontend engineer", "full stack developer",
-        "devops engineer", "data engineer", "machine learning engineer",
-        "software architect", "senior engineer",
-    ]
-    
-    locations = ["", "remote", "paris", "london", "berlin"]  # vide = worldwide
-    
-    for keyword in keywords[:5]:  # Limiter pour pas trop de requêtes
-        for location in locations[:3]:  # Limiter locations
-            if len(offers) >= 200:
-                break
-            
-            for page in range(num_pages):
-                try:
-                    offset = page * 10
-                    
-                    # Utiliser indeed.com avec parametres
-                    if location:
-                        url = f"https://www.indeed.com/jobs?q={keyword.replace(' ', '+')}&l={location}&start={offset}"
-                    else:
-                        url = f"https://www.indeed.com/jobs?q={keyword.replace(' ', '+')}&start={offset}"
-                    
-                    logger.info(f"  {keyword} ({location or 'worldwide'}) p{page+1}...")
-                    
-                    response = session.get(url, timeout=15)
-                    response.raise_for_status()
-                    
-                    # Extraire JSON avec regex (pattern du spider Scrapy)
-                    script_tag = re.findall(
-                        r'window.mosaic.providerData\["mosaic-provider-jobcards"\]=(\{.+?\});',
-                        response.text,
-                        re.DOTALL
-                    )
-                    
-                    if script_tag:
-                        try:
-                            json_blob = json.loads(script_tag[0])
-                            jobs_list = json_blob['metaData']['mosaicProviderJobCardsModel']['results']
-                            
-                            for job in jobs_list:
-                                try:
-                                    # Extraire tous les details disponibles
-                                    offer = {
-                                        "job_id": f"indeed_{job.get('jobkey', f'job_{len(offers)}')[:25]}",
-                                        "title": job.get('title', 'N/A'),
-                                        "company": job.get('company', 'N/A'),
-                                        "location": f"{job.get('jobLocationCity', '')}, {job.get('jobLocationState', '')}".strip(', '),
-                                        "description": job.get('snippet', job.get('summary', ''))[:800],
-                                        "source": "indeed.com",
-                                        "scrape_date": datetime.now().isoformat(),
-                                        "jobkey": job.get('jobkey'),
-                                        "rating": job.get('companyRating'),
-                                        "review_count": job.get('companyReviewCount'),
-                                        "salary_min": job.get('estimatedSalary', {}).get('min') if job.get('estimatedSalary') else None,
-                                        "salary_max": job.get('estimatedSalary', {}).get('max') if job.get('estimatedSalary') else None,
-                                    }
-                                    
-                                    if offer['title'] != 'N/A' and len(offer['title']) > 3:
-                                        offers.append(offer)
-                                except Exception as e:
-                                    logger.debug(f"    Erreur job: {str(e)[:50]}")
-                                    continue
-                            
-                            if jobs_list:
-                                logger.info(f"    ✓ {len(jobs_list)} jobs extraits")
-                        except Exception as e:
-                            logger.debug(f"    Erreur JSON: {str(e)[:50]}")
-                    
-                    time.sleep(2)
-                    
-                except Exception as e:
-                    logger.debug(f"  Erreur requête: {str(e)[:50]}")
-                    continue
-    
-    return offers
-
-
-def scrape_stackoverflow_jobs(num_pages: int = 3) -> List[Dict]:
-    """Scrape Stack Overflow Jobs avec BeautifulSoup."""
-    offers = []
-    session = requests.Session()
-    session.headers.update({
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
-    })
-    
+    # LinkedIn Jobs - scraper avec BeautifulSoup
     for page in range(1, num_pages + 1):
         try:
-            # Stack Overflow Jobs a changé mais on peut essayer
-            url = f"https://stackoverflow.com/jobs?pg={page}"
-            logger.info(f"  Page {page}: {url}")
+            # LinkedIn jobs search URL
+            url = f"https://www.linkedin.com/jobs/search/?keywords=tech%20developer&location=worldwide&start={(page-1)*25}"
+            logger.info(f"  Page {page}")
             
-            response = session.get(url, timeout=10)
-            response.raise_for_status()
+            response = session.get(url, timeout=15)
+            if response.status_code != 200:
+                logger.debug(f"    Status {response.status_code}")
+                continue
             
             soup = BeautifulSoup(response.text, "html.parser")
             
-            # Chercher les offres
-            job_cards = soup.find_all("div", class_=lambda x: x and "s-job-card" in (x if x else ""))
+            # Chercher les job cards
+            job_cards = soup.find_all("div", class_=lambda x: x and "base-card" in (x if x else "").lower())
             
-            logger.info(f"    Trouvé {len(job_cards)} offres")
+            logger.info(f"    Trouvé {len(job_cards)} éléments job")
             
             for card in job_cards:
                 try:
-                    # Titre
-                    title_elem = card.find("h2")
-                    title = title_elem.get_text(strip=True) if title_elem else "N/A"
+                    # Extraire titre
+                    title_elem = card.find("h3", class_=lambda x: x and "base-search-card__title" in (x if x else "").lower())
+                    if not title_elem:
+                        title_elem = card.find("a", {"data-job-id": True})
+                    title = title_elem.get_text(strip=True) if title_elem else ""
                     
-                    # Entreprise
-                    company_elem = card.find("h3")
-                    company = company_elem.get_text(strip=True) if company_elem else "N/A"
+                    if not title or len(title) < 3:
+                        continue
                     
-                    # Description
-                    desc_elem = card.find("p", class_="s-user-card--time")
-                    description = desc_elem.get_text(strip=True) if desc_elem else card.get_text(strip=True)[:300]
+                    # Filtrer sur titre d'abord
+                    if not is_it_job(title):
+                        continue
                     
-                    # Location
-                    location = "Remote/International"
-                    for elem in card.find_all("span"):
-                        if "remote" in elem.get_text(strip=True).lower():
-                            location = "Remote"
-                            break
+                    # Extraire entreprise
+                    company_elem = card.find("h4", class_=lambda x: x and "base-search-card__subtitle" in (x if x else "").lower())
+                    company = company_elem.get_text(strip=True) if company_elem else "LinkedIn"
                     
-                    if title != "N/A" and len(title) > 3:
-                        offers.append({
-                            "job_id": f"so_jobs_{len(offers)+1:04d}",
+                    # Extraire location
+                    location_elem = card.find("span", class_=lambda x: x and "job-search-card__location" in (x if x else "").lower())
+                    location = location_elem.get_text(strip=True) if location_elem else "Remote"
+                    
+                    # Extraire lien pour aller à la page individuelle
+                    link_elem = card.find("a", {"data-job-id": True})
+                    description = ""
+                    
+                    if link_elem and link_elem.get("href"):
+                        job_url = link_elem.get("href")
+                        if not job_url.startswith("http"):
+                            job_url = f"https://www.linkedin.com{job_url}"
+                        
+                        try:
+                            job_response = session.get(job_url, timeout=10)
+                            if job_response.status_code == 200:
+                                job_soup = BeautifulSoup(job_response.text, "html.parser")
+                                # Trouver description
+                                desc_elem = job_soup.find("div", class_=lambda x: x and "show-more-less-html__markup" in (x if x else "").lower())
+                                if desc_elem:
+                                    description = clean_text(desc_elem.get_text())
+                            time.sleep(0.5)
+                        except Exception as e:
+                            logger.debug(f"    Job page error: {str(e)[:30]}")
+                    
+                    # Si pas de description, utiliser le texte du card
+                    if not description:
+                        description = clean_text(card.get_text())[:500]
+                    
+                    # Filtrer aussi sur description
+                    if description and not is_it_job(title, description):
+                        continue
+                    
+                    offer = {
+                        "job_id": f"linkedin_{len(offers):04d}",
+                        "title": title,
+                        "company": company,
+                        "location": location,
+                        "description": description[:800],
+                        "source": "linkedin.com",
+                        "scrape_date": datetime.now().isoformat(),
+                    }
+                    
+                    offers.append(offer)
+                    logger.debug(f"    ✓ {title[:50]}")
+                    
+                except Exception as e:
+                    logger.debug(f"    Card error: {str(e)[:30]}")
+                    continue
+            
+            time.sleep(1)
+        except Exception as e:
+            logger.debug(f"  Error page {page}: {str(e)[:50]}")
+            continue
+    
+    logger.info(f"  ✓ LinkedIn: {len(offers)} offres IT extraites")
+    return offers
+    """Scrape Emploi.ma - amélioré avec filtre IT et beaucoup de pages."""
+    offers = []
+    session = requests.Session()
+    session.headers.update({
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+    })
+    
+    # IT keywords pour filtrer
+    it_keywords = ['python', 'java', 'javascript', 'developer', 'engineer', 'architect', 
+                   'devops', 'cloud', 'backend', 'frontend', 'fullstack', 'senior', 
+                   'lead', 'tech', 'software', 'react', 'node', 'django', 'aws', 'infra']
+    
+    def is_it_job(title, description=""):
+        combined = (title + " " + description).lower()
+        return sum(1 for kw in it_keywords if kw in combined) >= 1
+    
+    def clean_text(text):
+        """Remove HTML tags and entities."""
+        import re
+        text = re.sub(r'<[^>]+>', '', text or '')
+        text = re.sub(r'&[a-z]+;', '', text)
+        text = re.sub(r'\s+', ' ', text)
+        return text.strip()
+    
+    for page in range(1, num_pages + 1):
+        try:
+            # Emploi.ma listing page
+            url = f"https://www.emploi.ma/offres-emploi?page={page}"
+            logger.info(f"  Page {page}")
+            
+            response = session.get(url, timeout=10)
+            if response.status_code != 200:
+                logger.debug(f"    Status {response.status_code}")
+                continue
+            
+            soup = BeautifulSoup(response.text, "html.parser")
+            
+            # Chercher les liens d'offres
+            job_links = soup.find_all("a", class_=lambda x: x and "offer" in (x if x else "").lower())
+            if not job_links:
+                job_links = soup.find_all("a", attrs={"href": lambda x: x and "/offres-emploi/" in x if x else False})
+            
+            logger.info(f"    Trouvé {len(job_links)} liens")
+            
+            for link in job_links:
+                try:
+                    href = link.get("href", "")
+                    if not href or "/offres-emploi/" not in href:
+                        continue
+                    
+                    # Construire URL complète
+                    job_url = urljoin("https://www.emploi.ma", href)
+                    
+                    # Titre initial
+                    title = link.get_text(strip=True)
+                    if not title or len(title) < 3:
+                        continue
+                    
+                    # Filtrer sur titre d'abord
+                    if not is_it_job(title):
+                        continue
+                    
+                    # Scraper la page individuelle
+                    try:
+                        job_response = session.get(job_url, timeout=8)
+                        if job_response.status_code != 200:
+                            continue
+                        
+                        job_soup = BeautifulSoup(job_response.text, "html.parser")
+                        
+                        # Extraire infos
+                        company = "N/A"
+                        location = "Maroc"
+                        description = ""
+                        
+                        # Chercher détails
+                        for text in job_soup.find_all(["span", "p", "div"]):
+                            t = text.get_text(strip=True).lower()
+                            if any(city in t for city in ["casablanca", "rabat", "fez", "marrakech", "agadir"]):
+                                location = text.get_text(strip=True)
+                                break
+                        
+                        # Description
+                        desc_elem = job_soup.find("div", class_=lambda x: x and "description" in (x if x else "").lower())
+                        if not desc_elem:
+                            desc_elem = job_soup.find("div", class_=lambda x: x and "content" in (x if x else "").lower())
+                        
+                        if desc_elem:
+                            description = clean_text(desc_elem.get_text())
+                        
+                        # Filtrer aussi sur description
+                        if not description or not is_it_job(title, description):
+                            continue
+                        
+                        offer = {
+                            "job_id": f"emploi_ma_{len(offers):04d}",
                             "title": title,
                             "company": company,
                             "location": location,
-                            "description": description,
-                            "source": "stackoverflow",
+                            "description": description[:800],
+                            "source": "emploi.ma",
                             "scrape_date": datetime.now().isoformat(),
-                        })
+                        }
+                        
+                        offers.append(offer)
+                        logger.debug(f"    ✓ {title[:50]}")
+                        
+                        time.sleep(0.3)
+                    except Exception as e:
+                        logger.debug(f"    Job error: {str(e)[:30]}")
+                        continue
+                
                 except Exception as e:
-                    logger.debug(f"    Erreur parsing: {e}")
+                    logger.debug(f"    Link error: {str(e)[:30]}")
                     continue
             
-            if job_cards:
-                logger.info(f"    ✓ Offres extraites")
-            
-            time.sleep(2)
+            time.sleep(1)
         except Exception as e:
-            logger.warning(f"  Erreur page {page}: {e}")
+            logger.debug(f"  Error page {page}: {str(e)[:50]}")
             continue
     
+    logger.info(f"  ✓ Emploi.ma: {len(offers)} offres IT extraites")
     return offers
 
 

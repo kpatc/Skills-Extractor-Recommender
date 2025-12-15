@@ -81,36 +81,36 @@ def main():
         # Récupérer les données
         offers = pipeline.offers_with_skills
         clustering_result = pipeline.clustering_result
-        recommendations = pipeline.recommendations
+        # recommendations = pipeline.recommendations  # Désactivé pour le moment
 
         # Visualisations
-        if args.visualize:
-            logger.info("Génération des visualisations...")
-            visualizer = ResultsVisualizer()
-
-            visualizer.print_top_skills(offers, top_n=args.top_skills)
-            visualizer.print_cluster_summary(clustering_result)
-            visualizer.print_recommendations_summary(recommendations)
+        logger.info("Génération des visualisations...")
+        visualizer = ResultsVisualizer()
+        
+        visualizer.print_top_skills(offers, top_n=args.top_skills)
+        visualizer.print_cluster_summary(clustering_result)
 
         # Exports
         logger.info("Exportation des résultats...")
         exporter = ResultsExporter()
 
-        if args.export in ["all", "json"]:
-            exporter.export_to_json(recommendations, "recommendations.json")
-
-        if args.export in ["all", "excel"]:
-            exporter.export_to_excel(offers, "offers_analysis.xlsx")
-
         if args.export in ["all", "csv"]:
             exporter.export_skills_summary(offers, "skills_summary.csv")
-            exporter.export_recommendations_report(recommendations, "recommendations_report.json")
+
+        if args.export in ["all", "json"]:
+            exporter.export_to_json(offers, "offers_with_skills.json")
+
+        if args.export in ["all", "excel"]:
+            try:
+                exporter.export_to_excel(offers, "offers_analysis.xlsx")
+            except Exception as e:
+                logger.warning(f"Export Excel non disponible: {e}")
 
         if args.export in ["all", "report"]:
             visualizer.create_summary_report(
                 offers,
                 clustering_result,
-                recommendations,
+                None,
                 "summary_report.txt"
             )
 

@@ -105,37 +105,37 @@ class TFIDFEmbedder:
 
 
 class HybridEmbedder:
-    """Embedder hybride avec fallback."""
+    """Embedder hybride avec fallback automatique - BERT prioritaire."""
 
     def __init__(self):
-        """Initialise avec fallback automatique."""
+        """Initialise avec fallback automatique: sentence-transformers > Gemini > TF-IDF"""
         self.embedder = None
         self.method = None
         
-        # Essayer Gemini
-        if os.getenv("GEMINI_API_KEY"):
-            try:
-                self.embedder = GeminiEmbedder()
-                self.method = "gemini"
-                logger.info("✓ Embedder: Gemini")
-                return
-            except Exception as e:
-                logger.warning(f"Gemini non disponible: {e}")
-        
-        # Fallback sentence-transformers
+        # PRIORITÉ 1: sentence-transformers (BERT) - Meilleur rapport performance/vitesse
         try:
             self.embedder = SentenceTransformerEmbedder()
             self.method = "sentence_transformers"
-            logger.info("✓ Embedder: sentence-transformers")
+            logger.info("✓ Embedder: sentence-transformers (BERT) - ACTIVÉ")
             return
         except Exception as e:
             logger.warning(f"sentence-transformers non disponible: {e}")
         
-        # Fallback TF-IDF
+        # PRIORITÉ 2: Gemini (si API key disponible)
+        if os.getenv("GEMINI_API_KEY"):
+            try:
+                self.embedder = GeminiEmbedder()
+                self.method = "gemini"
+                logger.info("✓ Embedder: Gemini API")
+                return
+            except Exception as e:
+                logger.warning(f"Gemini non disponible: {e}")
+        
+        # FALLBACK: TF-IDF (dernier recours)
         try:
             self.embedder = TFIDFEmbedder()
             self.method = "tfidf"
-            logger.info("✓ Embedder: TF-IDF")
+            logger.warning("⚠️  Fallback: TF-IDF (performance limitée)")
             return
         except Exception as e:
             logger.error(f"Aucun embedder disponible: {e}")

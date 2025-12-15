@@ -78,10 +78,11 @@ class SkillExtractionPipeline:
             logger.info("-" * 80)
             self.clustering_result = self._clustering_step()
 
-            # Étape 5: Recommandations
-            logger.info("\n[ETAPE 5] RECOMMANDATIONS PERSONNALISEES")
-            logger.info("-" * 80)
-            self.recommendations = self._recommendations_step()
+            # Étape 5: Recommandations (DÉSACTIVÉE POUR LE MOMENT)
+            # logger.info("\n[ETAPE 5] RECOMMANDATIONS PERSONNALISEES")
+            # logger.info("-" * 80)
+            # self.recommendations = self._recommendations_step()
+            self.recommendations = {}
 
             # Résumé final
             self._print_summary()
