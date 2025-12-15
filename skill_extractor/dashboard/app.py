@@ -5,6 +5,13 @@ from pathlib import Path
 import plotly.express as px
 import plotly.graph_objects as go
 from collections import Counter
+import sys
+
+# Add skill extractor to path
+sys.path.insert(0, str(Path(__file__).parent.parent))
+
+from recommendtion.clustering_recommender import SkillsRecommender
+from nlp.advanced_skills_extractor import SkillsExtractor, process_jobs_with_advanced_extraction
 
 # Configuration de la page
 st.set_page_config(
@@ -76,14 +83,32 @@ page = st.sidebar.radio(
 @st.cache_data
 def load_data():
     try:
-        json_file = Path(__file__).parent.parent / "data" / "processed" / "job_offers_essential.json"
+        json_file = Path(__file__).parent.parent / "data" / "processed" / "job_offers_tech_filtered.json"
+        if not json_file.exists():
+            json_file = Path(__file__).parent.parent / "data" / "processed" / "job_offers_essential.json"
+        
         with open(json_file, 'r', encoding='utf-8') as f:
             offers = json.load(f)
         return offers
-    except:
+    except Exception as e:
+        st.error(f"Error loading data: {e}")
         return []
 
+@st.cache_resource
+def load_recommender():
+    """Load the recommendation model"""
+    try:
+        model_file = Path(__file__).parent.parent / "models" / "recommender_model.pkl"
+        if model_file.exists():
+            recommender = SkillsRecommender()
+            recommender.load_model(str(model_file))
+            return recommender
+    except:
+        pass
+    return None
+
 offers = load_data()
+recommender = load_recommender()
 
 if page == "📊 Dashboard":
     st.title("🚀 Skills Extractor & Recommender")
@@ -190,7 +215,7 @@ if page == "📊 Dashboard":
     
     if sources:
         sources_df = pd.DataFrame(list(sources.items()), columns=['Source', 'Nombre'])
-        fig = px.pie(sources_df, values='Nombre', names='Source, title='')
+        fig = px.pie(sources_df, values='Nombre', names='Source', title='')
         fig.update_layout(height=400)
         st.plotly_chart(fig, use_container_width=True)
 
