@@ -4,16 +4,6 @@
 
 ---
 
-## Quick Links
-- **[Quick Start (5 min)](#-quick-start-guide)** - Get running immediately
-- **[Full Setup (30 min)](#-complete-setup-guide)** - Detailed installation
-- **[Dataset Info](#-dataset--data-reconstruction)** - Data management
-- **[Architecture](#-system-architecture--pipeline)** - Technical details
-- **[Results](#-results--metrics)** - Performance metrics
-- **[FAQ & Troubleshooting](#-troubleshooting)** - Common issues
-
----
-
 ## Executive Summary
 
 This project implements a complete end-to-end pipeline for extracting technical competencies from job postings and providing personalized skill recommendations using advanced NLP techniques and machine learning clustering algorithms.
@@ -30,9 +20,33 @@ This project implements a complete end-to-end pipeline for extracting technical 
 - ✅ **Clean Code**: Well-documented, production-ready Python modules
 
 
-##  Quick Start Guide
+##  Architecture du Projet
 
-### 5-Minute Setup (Using Pre-Processed Data)
+### Pipeline de Traitement
+
+```
+[Sources Web]
+    ↓
+[Scrapers Python]
+    ↓
+[Raw Data - JSON/CSV]
+    ↓
+[Preprocessing NLP]
+    ↓
+[Extraction des compétences]
+    ↓
+[Vectorisation / Embeddings]
+    ↓
+[Clustering]
+    ↓
+[Recommandation]
+    ↓
+[Dashboard ]
+```
+---
+
+
+##  Quick Start Guide
 
 ```bash
 # 1. Clone & navigate
@@ -54,7 +68,7 @@ streamlit run dashboard/app.py
 
 ---
 
-## 🔧 Complete Setup Guide
+##  Setup Guide
 
 ### Prerequisites
 
@@ -178,19 +192,19 @@ recommendations = recommender.recommend_skills(['Python', 'Docker'])
 - Source distribution (ReKrute vs LinkedIn)
 - Interactive charts
 
-### Page 2: 🔬 Skills Extraction
+### Page 2: Skills Extraction
 - Extraction pipeline explanation
 - NLP techniques used
 - Validation rules
 - Performance metrics (87.2% precision)
 
-### Page 3: 💼 Job Offers
+### Page 3: Job Offers
 - Search all 250+ offers
 - Filter by skills, title, source
 - View complete descriptions
 - See extracted skills per offer
 
-### Page 4: 🎓 Recommendations
+### Page 4: Recommendations
 - Create user profile
 - Select current skills
 - Get personalized recommendations
@@ -283,19 +297,9 @@ python process_offers_nlp.py
 
 ---
 
-## System Architecture & Pipeline
+## Pipeline Stages
 
-### Complete Flow
 
-```
-SCRAPING → CLEANING → EXTRACTION → VALIDATION → CLUSTERING → RECOMMENDATION → DASHBOARD
-   ↓          ↓          ↓             ↓            ↓              ↓             ↓
-BeautifulSoup spaCy    Advanced      Tech Filter   KMeans/       Scoring      Streamlit
-Selenium      NLTK      Skills        Fuzzy Match   HDBSCAN       Multi-Criteria Plotly
-                        Extractor                                                Interactive
-```
-
-### Pipeline Stages Explained
 
 #### 1️⃣ Web Scraping
 - **ReKrute**: BeautifulSoup4 HTML parsing
