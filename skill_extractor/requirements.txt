@@ -11,3 +11,9 @@ hdbscan
 google-generativeai
 selenium
 webdriver-manager
+streamlit
+pandas
+plotly
+python-dotenv
+requests
+
