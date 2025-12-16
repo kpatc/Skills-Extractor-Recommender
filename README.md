@@ -1,10 +1,10 @@
-# 🚀 Intelligent Skills Extraction and Recommendation Platform
+# Intelligent Skills Extraction and Recommendation Platform
 
 **An intelligent, data-driven platform for automatic technical skills extraction from job offers using NLP, Machine Learning, and clustering-based recommendations.**
 
 ---
 
-## 📋 Quick Links
+## Quick Links
 - **[Quick Start (5 min)](#-quick-start-guide)** - Get running immediately
 - **[Full Setup (30 min)](#-complete-setup-guide)** - Detailed installation
 - **[Dataset Info](#-dataset--data-reconstruction)** - Data management
@@ -14,77 +14,23 @@
 
 ---
 
-## 📋 Executive Summary
+## Executive Summary
 
 This project implements a complete end-to-end pipeline for extracting technical competencies from job postings and providing personalized skill recommendations using advanced NLP techniques and machine learning clustering algorithms.
 
-**Academic Project** | **Module D - Data-Driven Digital Transformation** | **Year**: 2025 | **Status**: ✅ Complete
+**Academic Project** | **Module D - Data-Driven Digital Transformation** | **Year**: 2025
 
----
-
-## 🎯 Project Objectives
+## Project Objectives
 
 - ✅ **Web Scraping**: Collect job offers from ReKrute.com and LinkedIn (~250 offers)
 - ✅ **NLP Extraction**: Automatically extract technical skills with multi-layer validation
 - ✅ **Intelligent Clustering**: Identify 8+ distinct job profiles using KMeans/HDBSCAN
 - ✅ **Skill Recommendations**: Personalized recommendations based on user profiles
 - ✅ **Interactive Dashboard**: Streamlit-based visualization and exploration
-- ✅ **Academic Report**: Complete technical documentation (5-7 pages LaTeX)
 - ✅ **Clean Code**: Well-documented, production-ready Python modules
 
----
 
-## 📂 Project Structure
-
-```
-ProjectTD/
-├── README.md                          # ⭐ This file (complete guide)
-├── rapport/
-│   └── rapport_principal.tex          # 📄 Academic report (5-7 pages)
-│
-├── skill_extractor/                   # 🔧 Main module
-│   ├── scrapping/                     # Web scraping
-│   │   ├── rekrute_scraper.py        # ReKrute.com scraper
-│   │   └── linkedin_scraper.py       # LinkedIn scraper
-│   │
-│   ├── nlp/                          # NLP Processing
-│   │   ├── advanced_skills_extractor.py   # ⭐ Core extraction (150+ skills DB)
-│   │   ├── nlp_pipeline.py           # Pipeline orchestration
-│   │   └── text_cleaner.py           # Text preprocessing
-│   │
-│   ├── modelling/                    # ML & Clustering
-│   │   ├── clustering.py             # Vectorization & clustering
-│   │   ├── embeddings.py             # Embedding generation
-│   │   └── __init__.py
-│   │
-│   ├── recommendtion/                # Recommendation Engine
-│   │   ├── clustering_recommender.py # ⭐ Main recommender
-│   │   ├── cv_recommender_service.py
-│   │   ├── skill_gap.py
-│   │   └── __init__.py
-│   │
-│   ├── dashboard/                    # 📊 Streamlit App
-│   │   ├── app.py                    # ⭐ Main application (4 pages)
-│   │   └── requirements.txt
-│   │
-│   ├── data/                         # 📊 Data Storage
-│   │   ├── raw/                      # Raw scraped data
-│   │   ├── processed/                # Processed data ⭐ USE THIS
-│   │   │   ├── job_offers_skills_advanced.json (250 offers)
-│   │   │   ├── job_offers_essential.json
-│   │   │   └── job_offers_with_skills.csv
-│   │   └── embeddings/               # Vector files
-│   │
-│   ├── process_offers_nlp.py         # ⭐ Main pipeline script
-│   ├── requirements.txt              # Python dependencies
-│   └── .env                          # Configuration
-│
-└── backend/, UI/                     # Optional modules
-```
-
----
-
-## ⚡ Quick Start Guide
+##  Quick Start Guide
 
 ### 5-Minute Setup (Using Pre-Processed Data)
 
@@ -104,7 +50,7 @@ pip install -r requirements.txt
 streamlit run dashboard/app.py
 ```
 
-**✅ Dashboard ready at:** `http://localhost:8501`
+** Dashboard ready at:** `http://localhost:8501`
 
 ---
 
@@ -181,7 +127,7 @@ ls -lh data/processed/
 
 ---
 
-## 🚀 Running the System
+## Running the System
 
 ### Option 1: Launch Dashboard (Recommended)
 
@@ -226,7 +172,7 @@ recommendations = recommender.recommend_skills(['Python', 'Docker'])
 
 ## 📊 Dashboard Features
 
-### Page 1: 📈 Dashboard
+### Page 1: Dashboard
 - Total offers & skills metrics
 - Top 10 most requested skills
 - Source distribution (ReKrute vs LinkedIn)
@@ -253,9 +199,9 @@ recommendations = recommender.recommend_skills(['Python', 'Docker'])
 
 ---
 
-## 📥 Dataset & Data Reconstruction
+## Dataset & Data Reconstruction
 
-### Option 1: Use Pre-Processed Data ✅ RECOMMENDED
+### Option 1: Use Pre-Processed Data  RECOMMENDED
 
 Data is ready in `skill_extractor/data/processed/`:
 
@@ -337,7 +283,7 @@ python process_offers_nlp.py
 
 ---
 
-## 🏗️ System Architecture & Pipeline
+## System Architecture & Pipeline
 
 ### Complete Flow
 
@@ -494,7 +440,7 @@ Score = 0.5 × SkillMatch + 0.3 × ClusterSimilarity + 0.2 × ProfileFit
 
 ---
 
-## 📚 Code Examples
+## Code Examples
 
 ### Extract Skills
 
@@ -570,7 +516,7 @@ for skill, score, reason in recommendations:
 
 ---
 
-## 🧪 Testing & Validation
+## Testing & Validation
 
 ### Verify Setup
 
@@ -597,81 +543,7 @@ sleep 5
 curl -s http://localhost:8501 | head -1
 ```
 
-### Run Tests (if available)
 
-```bash
-pytest -v
-pytest test_skills_extractor.py
-```
-
----
-
-## 📄 Academic Report
-
-**Location:** `rapport/rapport_principal.tex`
-
-**Contents:**
-- Problematic & motivation
-- Data sources & collection
-- System architecture
-- NLP & ML methodology
-- Results & metrics
-- Limitations
-- Future improvements
-- Digital transformation impact
-
-**Compile to PDF:**
-```bash
-pdflatex -interaction=nonstopmode rapport/rapport_principal.tex
-# or upload to Overleaf.com
-```
-
----
-
-## 🚨 Troubleshooting
-
-### Dashboard won't start
-
-**Error: `ModuleNotFoundError: No module named 'recommendtion'`**
-```bash
-# Solution: Run from skill_extractor directory
-cd skill_extractor
-streamlit run dashboard/app.py  # NOT from dashboard/
-```
-
-**Error: Streamlit static files missing**
-```bash
-# Solution: Reinstall
-pip install --force-reinstall streamlit==1.28.1
-```
-
-### Extraction returns nothing
-
-```python
-# Debug
-from nlp.text_cleaner import TextCleaner
-from nlp.advanced_skills_extractor import SkillsExtractor
-
-cleaner = TextCleaner()
-extractor = SkillsExtractor()
-
-text = "Your job description"
-cleaned = cleaner.clean(text)
-print(f"Cleaned: {cleaned[:50]}")
-
-skills = extractor.extract_skills(cleaned)
-print(f"Skills: {skills}")
-```
-
-### Data files not found
-
-```bash
-# Regenerate
-cd skill_extractor
-python process_offers_nlp.py
-```
-
-### Dashboard is slow
 
 ```bash
 # Clear cache
@@ -681,68 +553,6 @@ streamlit cache clear
 # Edit dashboard/app.py to show 50 offers instead of all
 ```
 
----
-
-## ✅ Verification Checklist
-
-Before submission/sharing:
-
-```
-Setup:
-□ Repository cloned
-□ Virtual environment created & activated
-□ Dependencies installed (pip install -r requirements.txt)
-□ spaCy model downloaded (python -m spacy download en_core_web_sm)
-
-Data:
-□ Data files exist in data/processed/
-□ 250+ job offers present
-□ Embeddings generated
-
-Execution:
-□ Dashboard launches successfully
-□ All 4 pages load without errors
-□ Can search/filter offers
-□ Recommendations work
-
-Code:
-□ No syntax errors
-□ All modules importable
-□ All functions documented
-□ Code is clean & organized
-
-Documentation:
-□ README.md is complete (this file)
-□ Code has docstrings
-□ Examples work
-□ Report is readable
-```
-
----
-
-## 📊 Project Statistics
-
-| Metric | Value |
-|--------|-------|
-| **Python Files** | 18 |
-| **Lines of Code** | ~2,500 |
-| **Data Records** | 250 offers |
-| **Unique Skills** | 156 |
-| **Accuracy** | 87.2% |
-| **Documentation** | ~3,000 lines |
-| **Report Pages** | 5-7 |
-| **Tech Stack** | 15+ libraries |
-
----
-
-## 🔗 Links
-
-- 🐙 **GitHub**: https://github.com/kpatc/Skills-Extractor-Recommender
-- 📊 **Data**: `skill_extractor/data/processed/`
-- 🔧 **Code**: `skill_extractor/`
-- 📄 **Report**: `rapport/rapport_principal.tex`
-
----
 
 ## 🎓 Acknowledgments
 
@@ -756,16 +566,3 @@ Documentation:
 - [Streamlit](https://streamlit.io) - Dashboard framework
 - [Plotly](https://plotly.com) - Visualizations
 - [Sentence-Transformers](https://www.sbert.net) - Embeddings
-
----
-
-## 📜 License
-
-Academic Project - Year 2025  
-Module D - Data-Driven Digital Transformation
-
----
-
-**Last Updated:** December 16, 2025  
-**Status:** ✅ Complete and Ready for Submission  
-**Repository:** [GitHub](https://github.com/kpatc/Skills-Extractor-Recommender)
