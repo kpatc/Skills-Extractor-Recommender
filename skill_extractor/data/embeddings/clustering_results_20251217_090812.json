@@ -1,9 +1,9 @@
 {
-  "timestamp": "20251217_085953",
-  "embedding_method": "tfidf",
+  "timestamp": "20251217_090812",
+  "embedding_method": "gemini",
   "total_offers": 42,
   "total_skills": 64,
-  "num_clusters": 5,
+  "num_clusters": 1,
   "skills_with_clusters": [
     {
       "skill": "AWS",
@@ -35,7 +35,7 @@
     },
     {
       "skill": "CI/CD",
-      "cluster": 2
+      "cluster": 0
     },
     {
       "skill": "CSS",
@@ -63,7 +63,7 @@
     },
     {
       "skill": "Firebase",
-      "cluster": 3
+      "cluster": 0
     },
     {
       "skill": "Flutter",
@@ -83,11 +83,11 @@
     },
     {
       "skill": "GitLab",
-      "cluster": 2
+      "cluster": 0
     },
     {
       "skill": "GitLab CI",
-      "cluster": 2
+      "cluster": 0
     },
     {
       "skill": "Go",
@@ -211,7 +211,7 @@
     },
     {
       "skill": "SQL Server",
-      "cluster": 1
+      "cluster": 0
     },
     {
       "skill": "Scrum",
@@ -223,15 +223,15 @@
     },
     {
       "skill": "Spring",
-      "cluster": 4
+      "cluster": 0
     },
     {
       "skill": "Spring Boot",
-      "cluster": 4
+      "cluster": 0
     },
     {
       "skill": "Sql",
-      "cluster": 1
+      "cluster": 0
     },
     {
       "skill": "Swift",
@@ -271,16 +271,20 @@
       "Azure",
       "BDD",
       "Bootstrap",
+      "CI/CD",
       "CSS",
       "Confluence",
       "Docker",
       "Edge Computing",
       "Event-driven",
       "FinOps",
+      "Firebase",
       "Flutter",
       "Flux",
       "GCP",
       "Git",
+      "GitLab",
+      "GitLab CI",
       "Go",
       "Google Cloud",
       "Grafana",
@@ -311,8 +315,12 @@
       "React",
       "React Native",
       "Redis",
+      "SQL Server",
       "Scrum",
       "Shell",
+      "Spring",
+      "Spring Boot",
+      "Sql",
       "Swift",
       "TensorFlow",
       "Transformers",
@@ -320,22 +328,6 @@
       "Vue",
       "Vue.js",
       "jQuery"
-    ],
-    "1": [
-      "SQL Server",
-      "Sql"
-    ],
-    "2": [
-      "CI/CD",
-      "GitLab",
-      "GitLab CI"
-    ],
-    "3": [
-      "Firebase"
-    ],
-    "4": [
-      "Spring",
-      "Spring Boot"
     ]
   }
 }

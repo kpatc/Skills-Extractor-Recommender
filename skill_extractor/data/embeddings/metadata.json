@@ -1,7 +1,0 @@
-{
-  "total_offers": 53,
-  "total_skills": 22,
-  "embedding_dimension": 768,
-  "model": "Google Gemini Embedding API (embedding-001)",
-  "task_type": "SEMANTIC_SIMILARITY"
-}
