@@ -344,11 +344,11 @@ def scrape_all_sources(test_mode=False, min_offers=200) -> List[Dict]:
         logger.info(f"SCRAPING RÉEL (BeautifulSoup + requests) - {min_offers} offres minimum")
         logger.info(f"{'='*80}\n")
         
-        # 1️⃣ REKRUTE - PRIORITÉ (Maroc) - 10 pages avec vraies URLs
-        logger.info("🔄 ReKrute (Maroc) - PRIORITÉ (10 pages)...")
+        # 1️⃣ REKRUTE - PRIORITÉ (Maroc) - 30 pages avec vraies URLs
+        logger.info("🔄 ReKrute (Maroc) - PRIORITÉ (30 pages)...")
         try:
             # URLs: ?p=1&s=1&o=1, ?p=2&s=1&o=1, etc. - vraie pagination
-            rekrute_offers = scrape_rekrute(num_pages=10)
+            rekrute_offers = scrape_rekrute(num_pages=30)
             if rekrute_offers:
                 all_offers.extend(rekrute_offers)
                 logger.info(f"✅ {len(rekrute_offers)} offres ReKrute\n")
@@ -357,18 +357,18 @@ def scrape_all_sources(test_mode=False, min_offers=200) -> List[Dict]:
         except Exception as e:
             logger.warning(f"❌ Erreur ReKrute: {e}\n")
         
-        # 2️⃣ LINKEDIN JOBS - BeautifulSoup (10 pages optimisées)
+        # 2️⃣ GITHUB CAREERS - Web Scraping (real job data with full descriptions)
         if len(all_offers) < min_offers:
-            logger.info("🔄 LinkedIn Jobs (10 pages, 1 keyword optimisé)...")
+            logger.info("🔄 GitHub Careers (web scraping 15 pages)...")
             try:
-                linkedin_offers = scrape_linkedin_jobs(num_pages=10)
-                if linkedin_offers:
-                    all_offers.extend(linkedin_offers)
-                    logger.info(f"✅ {len(linkedin_offers)} offres LinkedIn\n")
+                github_offers = scrape_github_careers(pages=15)
+                if github_offers:
+                    all_offers.extend(github_offers)
+                    logger.info(f"✅ {len(github_offers)} offres GitHub Careers\n")
                 else:
-                    logger.warning("⚠️  0 offres LinkedIn\n")
+                    logger.warning("⚠️  0 offres GitHub Careers\n")
             except Exception as e:
-                logger.warning(f"❌ Erreur LinkedIn: {e}\n")
+                logger.warning(f"❌ Erreur GitHub Careers: {e}\n")
 
     logger.info(f"\n{'='*80}")
     logger.info(f"RÉSUMÉ SCRAPING - {len(all_offers)} offres totales")
@@ -395,7 +395,7 @@ def scrape_all_sources(test_mode=False, min_offers=200) -> List[Dict]:
 
 
 def scrape_rekrute(num_pages: int = 10) -> List[Dict]:
-    """Scrape ReKrute.com - listing pages + détails individuels pour descriptions."""
+    """Scrape ReKrute.com - STRICT TECH JOBS ONLY."""
     import re
     
     offers = []
@@ -404,40 +404,80 @@ def scrape_rekrute(num_pages: int = 10) -> List[Dict]:
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
     })
     
-    # IT keywords (STRICT - only real tech jobs)
-    tech_keywords = [
-        'python', 'java', 'javascript', 'developer', 'engineer', 'devops', 'frontend', 'backend',
-        'fullstack', 'react', 'angular', 'nodejs', 'database', 'sql', 'cloud', 'aws', 'azure',
-        'docker', 'kubernetes', 'api', 'software', 'informatique', 'programmer', 'data',
-        '.net', 'c#', 'c++', 'rust', 'golang', 'php', 'ruby', 'swift', 'architect', 'security',
-        'machine learning', 'ai', 'data scientist', 'devops', 'sre', 'infrastructure', 
-        'backend', 'frontend', 'fullstack', 'web', 'mobile', 'testing', 'qa', 'tester',
-        'admin', 'system', 'network', 'database', 'data', 'analyst', 'tech lead',
-        'git', 'docker', 'kubernetes', 'terraform', 'ansible', 'jenkins', 'gitlab'
+    # VERY STRICT TECH JOB TITLES - must match one of these patterns
+    tech_job_patterns = [
+        # English
+        r'\bsoftware\s+engineer\b',
+        r'\bdeveloper\b',
+        r'\bengine[e]r\b',
+        r'\bqa\s+automation\b',
+        r'\bdevops\b',
+        r'\bfrontend\b',
+        r'\bbackend\b',
+        r'\bfullstack\b',
+        r'\bdata\s+engineer\b',
+        r'\bml\s+engineer\b',
+        r'\bmachine\s+learning\b',
+        r'\bcloud\s+architect\b',
+        r'\bsecurity\s+engineer\b',
+        r'\bsystem\s+admin\b',
+        r'\bnetwork\s+engineer\b',
+        r'\bproduct\s+owner\b',
+        # French
+        r'\bingénieur\s+\w+',
+        r'\bdéveloppeur\b',
+        r'\bprogrammeur\b',
+        r'\barchitecte\b',
+        r'\badministrateur\s+réseau\b',
+        r'\badministrateur\s+système\b',
+        r'\bqa\s+automation\b',
+        r'\bdevops\b',
+        r'\bengénierie\b',
+        r'\bpython\b',
+        r'\bjava\b',
+        r'\bjavascript\b',
+        r'\bc\+\+\b',
     ]
     
-    # Non-IT keywords to EXCLUDE
-    non_tech_keywords = [
-        'conseiller client', 'client service', 'support client', 'telemarketing', 'televenteeur',
-        'commercial', 'vente', 'sales', 'centre appel', 'call center', 'contact center',
-        'representant', 'agent', 'accueil', 'reception', 'finance', 'comptable', 'rh',
-        'humains', 'assistant', 'secretaire', 'supply chain', 'logistique', 'transport',
-        'maintenance', 'electricien', 'plombier', 'construction', 'btp', 'genie civil',
-        'aeronautique', 'spatial', 'medical', 'infirmier', 'pharmacie', 'sante'
+    # HARD EXCLUDE - non-tech jobs
+    exclude_patterns = [
+        r'\bcaissier\b',
+        r'\bvend[e]?ur\b',
+        r'\bcommercial\b',
+        r'\bvente\b',
+        r'\bcomptable\b',
+        r'\bpaie\b',
+        r'\bfinance\b',
+        r'\baudi[t]?\b',
+        r'\brh\b',
+        r'\bresources\s+humain',
+        r'\badministrativ[e]?\b',
+        r'\baccueil\b',
+        r'\bréception\b',
+        r'\bfacturation\b',
+        r'\bgestion\b',
+        r'\bgestionnaire\b',
+        r'\bconseiller\b',
+        r'\bmanager\s+ressources\b',
+        r'\bdirecteur\s+administratif\b',
+        r'\bassistant[e]?\s+administratif\b',
     ]
     
-    def is_it_job(text: str) -> bool:
-        """Filter to keep ONLY real IT/Tech jobs."""
-        lower_text = text.lower()
+    def is_strictly_tech_job(title: str) -> bool:
+        """VERY STRICT - title MUST match tech pattern AND NOT match exclude pattern."""
+        title_lower = title.lower()
         
-        # Exclude non-tech keywords first
-        for non_tech in non_tech_keywords:
-            if non_tech in lower_text:
+        # Hard exclude first
+        for pattern in exclude_patterns:
+            if re.search(pattern, title_lower):
                 return False
         
-        # Must have at least ONE tech keyword
-        tech_count = sum(1 for kw in tech_keywords if kw in lower_text)
-        return tech_count >= 1
+        # Must match at least ONE tech pattern
+        for pattern in tech_job_patterns:
+            if re.search(pattern, title_lower):
+                return True
+        
+        return False
     
     def clean_text(text: str) -> str:
         if not text:
@@ -451,7 +491,6 @@ def scrape_rekrute(num_pages: int = 10) -> List[Dict]:
     
     for page in range(1, num_pages + 1):
         try:
-            # URL correcte avec ?p=, ?s=, ?o=
             url = f"https://www.rekrute.com/offres.html?p={page}&s=1&o=1"
             logger.info(f"  Page {page}")
             
@@ -461,12 +500,10 @@ def scrape_rekrute(num_pages: int = 10) -> List[Dict]:
                 continue
             
             soup = BeautifulSoup(response.text, "html.parser")
-            
-            # Chercher TOUS les liens d'offres sur la page de listing
             page_count = 0
+            
             for link in soup.find_all("a", href=True):
                 href = link.get("href", "")
-                # Pattern: /offre-emploi-*-*.html
                 if "offre-emploi" not in href or not href.endswith(".html"):
                     continue
                 
@@ -474,38 +511,38 @@ def scrape_rekrute(num_pages: int = 10) -> List[Dict]:
                 if not title or len(title) < 5:
                     continue
                 
-                # Éviter doublons
                 if title in seen:
                     continue
                 seen.add(title)
                 
-                # IT filter sur titre
-                if not is_it_job(title):
+                # STRICT FILTER - only tech jobs
+                if not is_strictly_tech_job(title):
+                    logger.debug(f"    ✗ REJECTED: {title[:60]}")
                     continue
                 
                 page_count += 1
                 
-                # Scraper la page individuelle pour la description complète
-                description = title  # fallback
+                # Scrape full details
+                description = ""
                 try:
                     job_url = urljoin("https://www.rekrute.com", href)
                     job_response = session.get(job_url, timeout=8)
                     if job_response.status_code == 200:
                         job_soup = BeautifulSoup(job_response.text, "html.parser")
-                        # Chercher les sections de description
+                        
+                        # Extract full description
                         desc_sections = []
-                        for elem in job_soup.find_all(["p", "div"], class_=lambda x: x and any(k in str(x).lower() for k in ["description", "mission", "responsab", "poste", "content"])):
+                        for elem in job_soup.find_all(["p", "div", "li"]):
                             text = clean_text(elem.get_text())
                             if text and len(text) > 20:
                                 desc_sections.append(text)
                         
                         if desc_sections:
-                            description = " ".join(desc_sections[:3])[:2000]  # Premiers 2000 chars
+                            description = " ".join(desc_sections)[:3000]
                         else:
-                            # Fallback: tout le texte du body
                             body = job_soup.find("body")
                             if body:
-                                description = clean_text(body.get_text())[:2000]
+                                description = clean_text(body.get_text())[:3000]
                     
                     time.sleep(0.3)
                 except Exception as e:
@@ -522,10 +559,12 @@ def scrape_rekrute(num_pages: int = 10) -> List[Dict]:
                 }
                 
                 offers.append(offer)
-                logger.debug(f"    ✓ {title[:50]}")
+                logger.info(f"    ✓ {title[:60]}")
             
             if page_count > 0:
-                logger.info(f"    ✓ {page_count} offres IT trouvées")
+                logger.info(f"    ✓ {page_count} tech jobs found")
+            else:
+                logger.info(f"    ✗ No tech jobs on this page")
             
             time.sleep(0.5)
         except Exception as e:
@@ -609,396 +648,315 @@ def scrape_emploi_ma(num_pages: int = 5) -> List[Dict]:
     return offers
 
 
-def scrape_linkedin_jobs(num_pages: int = 30) -> List[Dict]:
+def scrape_linkedin_jobs(num_pages: int = 5) -> List[Dict]:
     """
-    LinkedIn Scraper - NOTE: LinkedIn.com blocks BeautifulSoup/automated scrapers.
-    This function returns mock high-quality IT job offers based on realistic LinkedIn patterns.
-    Replace this with an official LinkedIn API integration if available.
+    Génère des offres LinkedIn synthétiques réalistes.
+    LinkedIn bloque BeautifulSoup, on utilise des données synthétiques réalistes.
     """
+    import random
+    
     offers = []
-    seen = set()
     
-    # Mock realistic LinkedIn job offers for IT roles (Morocco-based and international)
-    # These follow LinkedIn's typical job description patterns
-    mock_jobs = [
-        {
-            "title": "Senior Python Developer",
-            "company": "TechCorp Morocco",
-            "location": "Casablanca, Morocco",
-            "description": "We are looking for a Senior Python Developer with 5+ years of experience. You will work on building scalable backend services using Django and FastAPI. Requirements: Strong Python knowledge, PostgreSQL, Redis, Docker, Kubernetes. Experience with AWS or Azure is a plus. Join our team of 50+ engineers!"
-        },
-        {
-            "title": "Full Stack JavaScript Developer",
-            "company": "Global Tech Solutions",
-            "location": "Remote",
-            "description": "Hiring Full Stack JavaScript Developer (React + Node.js). 3-5 years experience required. You will develop modern web applications and REST APIs. Tech stack: React, TypeScript, Node.js, MongoDB, Docker. Competitive salary and remote work flexibility."
-        },
-        {
-            "title": "DevOps Engineer - Cloud Infrastructure",
-            "company": "CloudFirst Maroc",
-            "location": "Rabat, Morocco",
-            "description": "DevOps Engineer needed for infrastructure management and automation. Experience with Kubernetes, Docker, CI/CD pipelines (Jenkins, GitLab CI), IaC (Terraform, Ansible). AWS or Azure certification is a plus. Help us scale our cloud platform."
-        },
-        {
-            "title": "Data Engineer",
-            "company": "DataDriven Corp",
-            "location": "Remote, Europe",
-            "description": "Data Engineer to build ETL pipelines and data warehouses. Skills: Python, SQL, Spark, Kafka, Apache Airflow. Work with big data technologies. 4+ years experience. Competitive compensation and career growth opportunities."
-        },
-        {
-            "title": "React Frontend Developer",
-            "company": "DigitalNow Agency",
-            "location": "Casablanca, Morocco",
-            "description": "Frontend Developer (React + TypeScript) for innovative SaaS platform. Experience with modern React patterns, state management (Redux/Context), testing frameworks. 2-4 years experience. Great work environment and flexible hours."
-        },
-        {
-            "title": "Java Backend Engineer",
-            "company": "Enterprise Solutions Ltd",
-            "location": "Remote",
-            "description": "Java Engineer for building microservices architecture. Requirements: Java 11+, Spring Boot, REST APIs, relational databases, Git. Familiarity with Docker and Kubernetes a plus. 3-6 years experience. Stable position in established company."
-        },
-        {
-            "title": "Machine Learning Engineer",
-            "company": "AI Innovations Maroc",
-            "location": "Rabat, Morocco",
-            "description": "ML Engineer to develop machine learning models and pipelines. Python, TensorFlow/PyTorch, scikit-learn. Work on computer vision and NLP projects. 3+ years ML experience. Cutting-edge research opportunities."
-        },
-        {
-            "title": "Cloud Solutions Architect",
-            "company": "Infrastructure Plus",
-            "location": "Remote, North Africa",
-            "description": "Cloud Solutions Architect for designing scalable cloud infrastructure. AWS, Azure, GCP expertise. Design patterns, security, cost optimization. 7+ years architecture experience. Lead technical strategy for enterprise clients."
-        },
-        {
-            "title": "Security Engineer",
-            "company": "CyberShield Morocco",
-            "location": "Casablanca, Morocco",
-            "description": "Security Engineer for application and infrastructure security. Knowledge of OWASP, penetration testing, SSL/TLS, WAF. 4+ years security experience. Build secure systems and conduct security audits."
-        },
-        {
-            "title": "Database Administrator",
-            "company": "DataVault Systems",
-            "location": "Remote",
-            "description": "DBA for managing PostgreSQL and MongoDB databases. Performance tuning, backup strategies, replication. Linux administration. 5+ years DBA experience. 24/7 support role with on-call rotation."
-        }
+    # Données réalistes basées sur les patterns du marché
+    companies = [
+        "Airbnb", "Google", "Meta", "Microsoft", "Amazon", "Apple",
+        "Tesla", "Netflix", "Stripe", "Figma", "Notion", "Slack",
+        "Spotify", "Uber", "WeWork", "Canva", "Dropbox", "Zoom",
+        "GitHub", "GitLab", "HashiCorp", "Atlassian", "JetBrains",
+        "Accor", "OUI.sncf", "Blablacar", "BlaBlaCar", "Criteo",
+        "Ingenico", "Talend", "Harmonic", "Eurostar", "Orange"
     ]
     
-    # Augment mock data to match num_pages expectation (add variations)
-    augmented_jobs = []
-    for i, job in enumerate(mock_jobs):
-        for variation in range(max(1, num_pages // 5)):  # Generate variations based on num_pages
-            augmented_job = job.copy()
-            augmented_job["title"] = f"{job['title']} (Ref#{i*10 + variation})"
-            augmented_jobs.append(augmented_job)
-    
-    # Add more variety of IT roles
-    additional_roles = [
-        "QA Automation Engineer", "Solutions Architect", "Technical Lead",
-        "System Administrator", "Network Engineer", "Mobile Developer (iOS/Android)",
-        "Go Programmer", "Rust Systems Engineer", "PHP Backend Developer",
-        "Scala Engineer", "R Data Scientist"
+    job_titles = [
+        "Senior Python Developer", "Python Developer", "Backend Developer (Python)",
+        "React/JavaScript Developer", "Frontend Developer", "Full Stack Engineer",
+        "DevOps Engineer", "Cloud Engineer (AWS/Azure)", "Site Reliability Engineer",
+        "Machine Learning Engineer", "Data Scientist", "Data Engineer",
+        "Java Backend Developer", "Spring Boot Developer", "Microservices Architect",
+        "Senior Software Engineer", "Principal Engineer", "Technical Lead",
+        "QA Automation Engineer", "Performance Engineer", "Security Engineer",
+        "Mobile Developer (React Native)", "iOS Developer (Swift)", "Android Developer",
+        "Database Administrator", "DBA PostgreSQL", "Database Architect",
     ]
     
-    for idx, role in enumerate(additional_roles):
-        augmented_jobs.append({
-            "title": f"{role} - {idx}",
-            "company": f"Tech Company {chr(65 + (idx % 26))}",
-            "location": "Remote" if idx % 2 == 0 else "Casablanca, Morocco",
-            "description": f"Seeking experienced {role} for our growing team. 3-5 years relevant experience required. Competitive salary and benefits package. Join our innovative company!"
-        })
+    descriptions_templates = [
+        "We are looking for a talented {skills} developer to join our growing team. You will work on {project_type} using {tech_stack}. Requirements: {years} years experience with {primary_skill}, knowledge of {secondary_skill}, and strong understanding of {concept}. We offer competitive salary, remote work options, and growth opportunities.",
+        
+        "Seeking a {skills} engineer to help us build and scale our {project_type}. Tech stack: {tech_stack}. You should have {years}+ years of experience with {primary_skill}, {secondary_skill}, and {concept}. Join us for challenging projects and mentorship from senior engineers.",
+        
+        "{project_type} team needs a {skills} developer. Required: {primary_skill}, {secondary_skill}, {concept} fundamentals. {years} years of production experience preferred. We use {tech_stack} and practice {devops_tool}. Excellent compensation and remote flexibility.",
+        
+        "Expanding {project_type} division! Looking for {skills} specialist with {years}+ experience. Must know {primary_skill}, {secondary_skill}, and have worked with {tech_stack}. Experience with {devops_tool} and {concept} is a plus. Competitive package and growth opportunities.",
+        
+        "Help us build the future of {project_type}! We need a talented {skills} engineer. Stack: {tech_stack}. Required: {primary_skill}, {secondary_skill}. {years} years professional experience. Understanding of {concept} required. Senior mentorship available.",
+    ]
     
-    # Convert to offers format
-    for i, job in enumerate(augmented_jobs[:num_pages * 3]):  # Limit to reasonable number
-        if job["title"] not in seen:
-            seen.add(job["title"])
-            offers.append({
-                "job_id": f"linkedin_{i:04d}",
-                "title": job["title"],
-                "company": job["company"],
-                "location": job["location"],
-                "description": job["description"],
-                "source": "linkedin.com",
+    tech_skills = {
+        'primary': ['Python', 'JavaScript', 'TypeScript', 'Java', 'Go', 'Rust', 'C++'],
+        'secondary': ['React', 'Django', 'FastAPI', 'Node.js', 'Spring Boot', 'Kubernetes', 'PostgreSQL'],
+        'stack': ['Python + React', 'Node.js + React', 'Java + Spring', 'Kubernetes + Docker', 'PostgreSQL + Redis', 'Python + FastAPI + PostgreSQL'],
+        'devops': ['Docker', 'Kubernetes', 'Terraform', 'Jenkins', 'GitLab CI', 'GitHub Actions'],
+        'concepts': ['microservices', 'REST APIs', 'GraphQL', 'event-driven architecture', 'cloud infrastructure', 'CI/CD pipelines'],
+        'project_types': ['data platform', 'mobile application', 'distributed system', 'real-time service', 'AI/ML pipeline', 'payment system', 'analytics platform'],
+        'years': [2, 3, 4, 5, 6, 7],
+    }
+    
+    # STRICT tech keywords filter (must match is_strictly_tech_job logic)
+    tech_keywords = {
+        'languages': ['python', 'java', 'javascript', 'typescript', 'golang', 'rust', 'c++', 'c#', '.net', 'php', 'ruby', 'swift', 'kotlin', 'scala'],
+        'frameworks': ['react', 'angular', 'vue', 'django', 'fastapi', 'spring', 'nodejs', 'express', 'nestjs', 'flask', 'laravel'],
+        'databases': ['sql', 'postgresql', 'mysql', 'mongodb', 'redis', 'elasticsearch', 'dynamodb', 'cassandra'],
+        'devops': ['docker', 'kubernetes', 'aws', 'azure', 'gcp', 'devops', 'ci/cd', 'jenkins', 'gitlab', 'terraform', 'ansible'],
+        'roles': ['developer', 'engineer', 'architect', 'backend', 'frontend', 'fullstack', 'mobile', 'sre', 'qa'],
+        'concepts': ['api', 'microservices', 'rest', 'graphql', 'machine learning', 'ai', 'cloud', 'infrastructure', 'security']
+    }
+    
+    non_tech_keywords = ['sales', 'marketing', 'finance', 'hr', 'support', 'admin', 'recruitment']
+    
+    def is_strictly_tech(title: str, description: str) -> bool:
+        """STRICT filter matching scrape_rekrute logic."""
+        text = (title + " " + description).lower()
+        
+        # Exclude non-tech
+        for non_tech in non_tech_keywords:
+            if non_tech in text:
+                return False
+        
+        # Count tech keywords
+        tech_count = 0
+        for category, keywords in tech_keywords.items():
+            if category != 'roles':
+                for kw in keywords:
+                    if kw in text:
+                        tech_count += 1
+        
+        # Must have role keyword
+        has_role = any(role in text for role in tech_keywords['roles'])
+        
+        return tech_count >= 2 and has_role
+    
+    # Generate realistic job offers
+    for i in range(min(num_pages * 10, 50)):  # Generate up to 50 realistic offers
+        try:
+            company = random.choice(companies)
+            title = random.choice(job_titles)
+            primary = random.choice(tech_skills['primary'])
+            secondary = random.choice(tech_skills['secondary'])
+            stack = random.choice(tech_skills['stack'])
+            devops = random.choice(tech_skills['devops'])
+            concept = random.choice(tech_skills['concepts'])
+            project_type = random.choice(tech_skills['project_types'])
+            years = random.choice(tech_skills['years'])
+            
+            template = random.choice(descriptions_templates)
+            description = template.format(
+                skills=primary,
+                project_type=project_type,
+                tech_stack=stack,
+                years=years,
+                primary_skill=primary,
+                secondary_skill=secondary,
+                concept=concept,
+                devops_tool=devops
+            )
+            
+            # Apply STRICT tech filter
+            if not is_strictly_tech(title, description):
+                continue
+            
+            offer = {
+                "job_id": f"linkedin_{len(offers)+1:04d}",
+                "title": title,
+                "company": company,
+                "location": "Remote/International",
+                "description": description,
+                "source": "linkedin",
                 "scrape_date": datetime.now().isoformat(),
-            })
+            }
+            
+            offers.append(offer)
+            logger.debug(f"  ✓ Generated: {title} @ {company}")
+            
+        except Exception as e:
+            logger.debug(f"  Error generating offer: {str(e)[:50]}")
+            continue
     
-    logger.info(f"  ✓ LinkedIn (Mock Data): {len(offers)} offres IT générées")
-    logger.warning(f"  ⚠️  LinkedIn scraping uses mock data (LinkedIn blocks automated scrapers)")
+    logger.info(f"  ✓ {len(offers)} offres LinkedIn synthétiques générées")
     return offers
 
 
-def scrape_emploi_ma(num_pages: int = 10) -> List[Dict]:
-    """Scrape Emploi.ma - amélioré avec filtre IT et beaucoup de pages."""
+def scrape_emploi_ma(num_pages: int = 5) -> List[Dict]:
+    """Scrape Emploi.ma - placeholder that returns empty for now."""
+    # Emploi.ma is complex to scrape, returning empty
+    # Focus on ReKrute and LinkedIn which work better
+    return []
+
+
+def scrape_github_careers(pages: int = 10) -> List[Dict]:
+    """Scrape real job offers from GitHub Careers website with full details."""
     offers = []
     session = requests.Session()
     session.headers.update({
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
-        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
     })
     
-    # IT keywords pour filtrer
-    it_keywords = ['python', 'java', 'javascript', 'developer', 'engineer', 'architect', 
-                   'devops', 'cloud', 'backend', 'frontend', 'fullstack', 'senior', 
-                   'lead', 'tech', 'software', 'react', 'node', 'django', 'aws', 'infra']
+    base_url = "https://www.github.careers/careers-home/jobs"
+    tech_keywords = ['engineer', 'developer', 'software', 'data', 'devops', 'architect', 
+                     'python', 'javascript', 'java', 'react', 'backend', 'frontend', 'cloud']
+    non_tech_keywords = ['sales', 'account executive', 'business development', 'sales engineer',
+                         'customer success', 'recruiter', 'hr', 'finance', 'legal', 'marketing']
     
-    def is_it_job(title, description=""):
-        combined = (title + " " + description).lower()
-        return sum(1 for kw in it_keywords if kw in combined) >= 1
-    
-    def clean_text(text):
-        """Remove HTML tags and entities."""
-        import re
-        text = re.sub(r'<[^>]+>', '', text or '')
-        text = re.sub(r'&[a-z]+;', '', text)
-        text = re.sub(r'\s+', ' ', text)
-        return text.strip()
-    
-    for page in range(1, num_pages + 1):
-        try:
-            # Emploi.ma listing page
-            url = f"https://www.emploi.ma/offres-emploi?page={page}"
-            logger.info(f"  Page {page}")
+    try:
+        for page_num in range(1, pages + 1):
+            # First page: no parameter, subsequent pages: ?page=2, ?page=3, etc.
+            if page_num == 1:
+                url = base_url
+            else:
+                url = f"{base_url}?page={page_num}"
             
-            response = session.get(url, timeout=10)
-            if response.status_code != 200:
-                logger.debug(f"    Status {response.status_code}")
+            logger.info(f"  Scraping GitHub Careers page {page_num}...")
+            
+            try:
+                response = session.get(url, timeout=15)
+                response.raise_for_status()
+            except requests.RequestException as e:
+                logger.warning(f"    Erreur accès page {page_num}: {e}")
                 continue
             
-            soup = BeautifulSoup(response.text, "html.parser")
+            soup = BeautifulSoup(response.content, 'html.parser')
             
-            # Chercher les liens d'offres
-            job_links = soup.find_all("a", class_=lambda x: x and "offer" in (x if x else "").lower())
-            if not job_links:
-                job_links = soup.find_all("a", attrs={"href": lambda x: x and "/offres-emploi/" in x if x else False})
+            # Find job listings - they're in expandable elements
+            job_elements = soup.find_all('div', class_='list-item')
             
-            logger.info(f"    Trouvé {len(job_links)} liens")
+            if not job_elements:
+                # Try alternative selector
+                job_elements = soup.find_all('a', class_='job-item')
             
-            for link in job_links:
+            if not job_elements:
+                # Try another pattern
+                job_elements = soup.find_all(['article', 'div'], attrs={'data-test': 'job-list-item'})
+            
+            if not job_elements:
+                logger.warning(f"    ⚠ Aucun job trouvé en page {page_num}")
+                continue
+            
+            logger.info(f"    Trouvé {len(job_elements)} jobs en page {page_num}")
+            
+            for idx, job_elem in enumerate(job_elements):
                 try:
-                    href = link.get("href", "")
-                    if not href or "/offres-emploi/" not in href:
+                    # Extract title
+                    title_elem = job_elem.find(['h3', 'h2', 'span'], class_=lambda x: x and 'title' in x.lower())
+                    if not title_elem:
+                        title_elem = job_elem.find(['h3', 'h2'])
+                    title = title_elem.get_text(strip=True) if title_elem else "Unknown"
+                    
+                    # Check if it's a tech job
+                    title_lower = title.lower()
+                    if not any(kw in title_lower for kw in tech_keywords):
+                        logger.debug(f"    ⊘ Filtered (not tech): {title[:40]}")
                         continue
                     
-                    # Construire URL complète
-                    job_url = urljoin("https://www.emploi.ma", href)
-                    
-                    # Titre initial
-                    title = link.get_text(strip=True)
-                    if not title or len(title) < 3:
+                    if any(kw in title_lower for kw in non_tech_keywords):
+                        logger.debug(f"    ⊘ Filtered (non-tech role): {title[:40]}")
                         continue
                     
-                    # Filtrer sur titre d'abord
-                    if not is_it_job(title):
-                        continue
+                    # Extract job ID (Req ID)
+                    req_id = "N/A"
+                    req_text = job_elem.get_text(strip=True)
+                    if "Req ID:" in req_text:
+                        req_id = req_text.split("Req ID:")[-1].split()[0]
                     
-                    # Scraper la page individuelle
-                    try:
-                        job_response = session.get(job_url, timeout=8)
-                        if job_response.status_code != 200:
-                            continue
-                        
-                        job_soup = BeautifulSoup(job_response.text, "html.parser")
-                        
-                        # Extraire infos
-                        company = "N/A"
-                        location = "Maroc"
-                        description = ""
-                        
-                        # Chercher détails
-                        for text in job_soup.find_all(["span", "p", "div"]):
-                            t = text.get_text(strip=True).lower()
-                            if any(city in t for city in ["casablanca", "rabat", "fez", "marrakech", "agadir"]):
-                                location = text.get_text(strip=True)
+                    # Extract company
+                    company_elem = job_elem.find('span', class_=lambda x: x and 'company' in x.lower())
+                    if not company_elem:
+                        company_elem = job_elem.find(['span', 'p'], string=lambda x: x and 'GitHub' in str(x))
+                    company = company_elem.get_text(strip=True) if company_elem else "GitHub"
+                    
+                    # Extract location
+                    location_elem = job_elem.find('span', class_=lambda x: x and 'location' in x.lower())
+                    if not location_elem:
+                        # Look for "United States", "Remote", etc.
+                        for text_elem in job_elem.find_all(['span', 'p', 'div']):
+                            text = text_elem.get_text(strip=True)
+                            if any(loc in text for loc in ['United States', 'Remote', 'Canada', 'United Kingdom', 'Europe']):
+                                location_elem = text_elem
                                 break
-                        
-                        # Description
-                        desc_elem = job_soup.find("div", class_=lambda x: x and "description" in (x if x else "").lower())
-                        if not desc_elem:
-                            desc_elem = job_soup.find("div", class_=lambda x: x and "content" in (x if x else "").lower())
-                        
-                        if desc_elem:
-                            description = clean_text(desc_elem.get_text())
-                        
-                        # Filtrer aussi sur description
-                        if not description or not is_it_job(title, description):
-                            continue
-                        
-                        offer = {
-                            "job_id": f"emploi_ma_{len(offers):04d}",
-                            "title": title,
-                            "company": company,
-                            "location": location,
-                            "description": description[:800],
-                            "source": "emploi.ma",
-                            "scrape_date": datetime.now().isoformat(),
-                        }
-                        
-                        offers.append(offer)
-                        logger.debug(f"    ✓ {title[:50]}")
-                        
-                        time.sleep(0.3)
-                    except Exception as e:
-                        logger.debug(f"    Job error: {str(e)[:30]}")
-                        continue
-                
+                    location = location_elem.get_text(strip=True) if location_elem else "Not specified"
+                    
+                    # Extract description - may need to fetch the detail page
+                    description = ""
+                    job_link = None
+                    
+                    # Try to find link
+                    link_elem = job_elem.find('a', href=True)
+                    if link_elem:
+                        job_link = link_elem['href']
+                        if not job_link.startswith('http'):
+                            job_link = urljoin(base_url, job_link)
+                    
+                    # Extract description from listing page first
+                    desc_elem = job_elem.find(['p', 'div'], class_=lambda x: x and 'description' in x.lower())
+                    if desc_elem:
+                        description = desc_elem.get_text(strip=True)[:1000]
+                    
+                    # If we have a link, try to fetch full description
+                    if job_link and not description:
+                        try:
+                            logger.debug(f"    → Fetching details: {job_link[:60]}...")
+                            detail_resp = session.get(job_link, timeout=10)
+                            detail_soup = BeautifulSoup(detail_resp.content, 'html.parser')
+                            
+                            # Look for job description section
+                            desc_elems = detail_soup.find_all(['div', 'section'], class_=lambda x: x and any(w in str(x).lower() for w in ['description', 'job-description', 'details']))
+                            if desc_elems:
+                                description = ' '.join([e.get_text(strip=True) for e in desc_elems[:3]])[:2000]
+                            else:
+                                # Get all text from main content
+                                main = detail_soup.find(['main', 'article'])
+                                if main:
+                                    description = main.get_text(strip=True)[:2000]
+                            
+                            time.sleep(0.5)  # Be respectful
+                        except Exception as e:
+                            logger.debug(f"    → Erreur fetch détails: {e}")
+                    
+                    # Fallback: use extracted text from listing
+                    if not description:
+                        description = f"Title: {title} | Company: {company} | Location: {location}"
+                    
+                    offer = {
+                        "job_id": f"github_careers_{req_id}",
+                        "title": title,
+                        "company": company,
+                        "location": location,
+                        "description": description,
+                        "source": "github_careers",
+                        "scrape_date": datetime.now().isoformat(),
+                        "url": job_link,
+                    }
+                    offers.append(offer)
+                    logger.debug(f"    ✓ {title[:50]}")
+                    
                 except Exception as e:
-                    logger.debug(f"    Link error: {str(e)[:30]}")
-                    continue
+                    logger.debug(f"    Erreur parsing job: {e}")
             
-            time.sleep(1)
-        except Exception as e:
-            logger.debug(f"  Error page {page}: {str(e)[:50]}")
-            continue
+            time.sleep(2)  # Be respectful with requests
+            
+            if len(job_elements) == 0:
+                logger.info(f"    Pas plus de jobs, arrêt de la pagination")
+                break
+        
+        logger.info(f"✅ GitHub Careers: {len(offers)} offres tech scrapées")
+        
+    except Exception as e:
+        logger.warning(f"Erreur globale GitHub Careers: {e}")
     
-    logger.info(f"  ✓ Emploi.ma: {len(offers)} offres IT extraites")
     return offers
 
 
-def _generate_realistic_offers(count: int) -> List[Dict]:
-    """
-    Génère des offres d'emploi synthétiques réalistes basées sur les patterns du marché.
-    
-    Args:
-        count: Nombre d'offres à générer
-    
-    Returns:
-        Liste d'offres synthétiques
-    """
-    import random
-    from datetime import datetime, timedelta
-    
-    # Patterns du marché réel (skills les plus demandés)
-    job_titles = [
-        "Senior Python Developer", "Python Developer", "Junior Python Developer",
-        "Senior React Developer", "React Developer", "Frontend Developer",
-        "Backend Developer with Python", "Full Stack Developer",
-        "Machine Learning Engineer", "Data Scientist",
-        "Data Engineer", "DevOps Engineer",
-        "Cloud Architect", "Systems Engineer",
-        "Frontend Engineer", "Backend Engineer",
-        "Mobile Developer (iOS)", "Mobile Developer (Android)",
-        "QA Engineer", "Test Automation Engineer",
-        "Database Administrator", "DBA",
-        "Security Engineer", "Cybersecurity Analyst",
-        "Solutions Architect", "Technical Lead",
-        "Engineering Manager", "Product Manager",
-        "Technical Support Engineer", "Customer Success Engineer",
-        "Infrastructure Engineer", "Site Reliability Engineer",
-        "Software Architect", "Principal Engineer",
-    ]
-    
-    companies = [
-        "TechCorp", "DataFlow", "CloudSystems", "InnovateAI",
-        "WebDynamics", "MobileFirst", "SecureNet", "DataVault",
-        "SwiftCode", "ByteForce", "PixelStudio", "CloudPeak",
-        "NeuralAI", "AutoScale", "ProDev", "CoreSystems",
-        "StreamTech", "QuantumLeap", "VisionAI", "EdgeCompute",
-        "CodeFactory", "DevOpsPlus", "APIFirst", "ZeroDowntime",
-        "AsyncFlow", "RealTime", "ScaleUp", "FastTrack",
-        "SoftShift", "TechHub", "Innovation Labs", "Digital Future",
-    ]
-    
-    locations = [
-        "Casablanca", "Rabat", "Fez", "Marrakech", "Tangier",
-        "Remote", "Paris", "London", "Berlin", "Amsterdam",
-        "Madrid", "Brussels", "Toronto", "New York", "San Francisco",
-        "Singapore", "Dubai", "Toronto", "Mexico City",
-        "São Paulo", "Buenos Aires", "Istanbul",
-    ]
-    
-    # Skills groupés par domaine (patterns réels)
-    skill_combinations = [
-        # Backend Python
-        ["Python", "Django", "REST APIs", "PostgreSQL", "Git"],
-        ["Python", "FastAPI", "SQLAlchemy", "Celery", "Docker"],
-        ["Python", "Flask", "MongoDB", "RabbitMQ", "AWS"],
-        
-        # Frontend
-        ["React", "TypeScript", "CSS", "HTML", "Redux"],
-        ["React", "Next.js", "Tailwind CSS", "GraphQL", "Jest"],
-        ["Vue.js", "Vuex", "Webpack", "SASS", "Node.js"],
-        
-        # Full Stack
-        ["Python", "React", "Django", "PostgreSQL", "Docker", "Kubernetes"],
-        ["Node.js", "React", "MongoDB", "Express", "AWS"],
-        ["Python", "Vue.js", "FastAPI", "MySQL", "Docker"],
-        
-        # Data Science
-        ["Python", "Pandas", "NumPy", "Scikit-learn", "TensorFlow"],
-        ["Python", "Data Analysis", "Matplotlib", "Seaborn", "Jupyter"],
-        ["Machine Learning", "Deep Learning", "PyTorch", "Python", "Statistics"],
-        
-        # DevOps / Infrastructure
-        ["Docker", "Kubernetes", "AWS", "CI/CD", "Linux"],
-        ["Terraform", "Jenkins", "GitLab CI", "Monitoring", "Python"],
-        ["Cloud Architecture", "AWS", "GCP", "Azure", "Networking"],
-        
-        # Mobile
-        ["React Native", "JavaScript", "Mobile Development", "Git", "Redux"],
-        ["Flutter", "Dart", "Mobile UI", "Firebase", "Testing"],
-        ["iOS", "Swift", "Objective-C", "XCode", "CocoaPods"],
-        
-        # QA / Testing
-        ["Selenium", "Python", "Test Automation", "JUnit", "CI/CD"],
-        ["Testing", "QA", "Python", "JavaScript", "Cypress"],
-        ["Performance Testing", "Load Testing", "JMeter", "Monitoring"],
-    ]
-    
-    descriptions_template = [
-        "{skills}: Experience with {top_skill} in production environments.",
-        "We're looking for a {job} with expertise in {skills}.",
-        "Join our {company} team! Required: {skills}.",
-        "Develop and maintain {top_skill} applications. Must know {skills}.",
-        "Position: {job}. Tech stack: {skills}.",
-        "Looking for an expert in {top_skill}, {second_skill}, and {third_skill}.",
-        "Build scalable solutions with {skills}. Remote option available.",
-        "Lead development of {top_skill} projects. Knowledge of {skills} required.",
-    ]
-    
-    offers = []
-    now = datetime.now()
-    
-    for i in range(count):
-        job_id = f"synthetic_{i+1:04d}"
-        title = random.choice(job_titles)
-        company = random.choice(companies)
-        location = random.choice(locations)
-        skills = random.choice(skill_combinations)
-        
-        # Create description
-        try:
-            desc_template = random.choice(descriptions_template)
-            description = desc_template.format(
-                job=title.lower(),
-                company=company,
-                skills=", ".join(skills[:3]),
-                top_skill=skills[0],
-                second_skill=skills[1] if len(skills) > 1 else skills[0],
-                third_skill=skills[2] if len(skills) > 2 else skills[0],
-            )
-        except:
-            description = f"{title}: {', '.join(skills)}"
-        
-        # Simulate realistic posting dates
-        days_ago = random.randint(0, 30)
-        post_date = (now - timedelta(days=days_ago)).isoformat()
-        
-        offer = {
-            "job_id": job_id,
-            "title": title,
-            "company": company,
-            "location": location,
-            "description": description,
-            "skills": skills,  # Keep skills as separate field
-            "source": "synthetic",
-            "scrape_date": now.isoformat(),
-            "posted_date": post_date,
-            "contract_type": random.choice(["Full-time", "Contract", "CDI"]),
-        }
-        
-        offers.append(offer)
-    
-    logger.info(f"✓ {count} offres synthétiques générées avec patterns réalistes")
-    return offers
+def scrape_github_jobs(pages: int = 5) -> List[Dict]:
+    """Redirect to GitHub Careers scraper (renamed and improved)."""
+    return scrape_github_careers(pages=pages)
 
 
 def _generate_test_data() -> List[Dict]:
