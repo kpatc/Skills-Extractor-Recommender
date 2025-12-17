@@ -264,12 +264,12 @@ def calculate_skill_gap(user_skills, all_offers):
     
     return gap[:10]
 
-def get_recommendations(user_skills, user_title, all_offers):
-    """Generate skill recommendations"""
+def get_recommendations(user_skills, user_title, all_offers, cluster_skills=None):
+    """Generate skill recommendations based on demand and clusters"""
     user_skill_set = {s.lower() for s in user_skills}
     
     # Get top skills
-    top_skills = get_top_skills(all_offers, limit=30)
+    top_skills = get_top_skills(all_offers, limit=50)
     
     # Find skills that user doesn't have but are in high demand
     recommendations = []
@@ -277,14 +277,32 @@ def get_recommendations(user_skills, user_title, all_offers):
         if skill.lower() not in user_skill_set:
             # Score based on frequency
             score = frequency / len(all_offers) if all_offers else 0
+            
+            # Check if skill is in cluster skills for additional weighting
+            in_clusters = 0
+            if cluster_skills:
+                for cluster_id, skills in cluster_skills.items():
+                    if cluster_id != -1 and any(skill.lower() == s.lower() for s in skills):
+                        in_clusters += 1
+            
+            priority = 'CRITICAL' if score > 0.4 else 'HIGH' if score > 0.25 else 'MEDIUM' if score > 0.15 else 'LOW'
+            
             recommendations.append({
                 'skill': skill,
                 'frequency': frequency,
                 'score': score,
-                'priority': 'HIGH' if score > 0.3 else 'MEDIUM' if score > 0.15 else 'LOW'
+                'in_clusters': in_clusters,
+                'priority': priority
             })
     
-    return recommendations[:10]
+    # Sort by priority and score
+    priority_order = {'CRITICAL': 0, 'HIGH': 1, 'MEDIUM': 2, 'LOW': 3}
+    recommendations.sort(
+        key=lambda x: (priority_order.get(x['priority'], 4), -x['score']),
+        reverse=False
+    )
+    
+    return recommendations[:15]
 
 # ====== MAIN APP ======
 
@@ -453,55 +471,97 @@ elif page == "Morocco vs International":
 # ====== PAGE 3: CLUSTERS ANALYSIS ======
 elif page == "Clusters Analysis":
     st.title("🎯 Job Clusters Analysis")
+    st.markdown("Jobs grouped by skill similarity - Each cluster represents a job family")
     
     if not offers:
         st.error("No data available")
     else:
-        cluster_skills, cluster_titles = get_cluster_info(offers, clusters)
+        cluster_skills, cluster_titles, cluster_offers = get_cluster_info(offers, clusters)
+        
+        # Filter out unclustered
+        valid_clusters = {k: v for k, v in cluster_skills.items() if k != -1}
         
         st.subheader("Overview")
-        st.write(f"**Total Clusters:** {len(cluster_skills)}")
+        col1, col2, col3 = st.columns(3)
         
-        # Cluster size distribution
-        cluster_sizes = {cid: len(titles) for cid, titles in cluster_titles.items()}
-        st.write(f"**Cluster Sizes:** {sorted([s for c, s in cluster_sizes.items() if c != -1], reverse=True)}")
+        with col1:
+            st.markdown(f"""
+            <div class="metric-card">
+                <h3>{len(valid_clusters)}</h3>
+                <p>Job Clusters</p>
+            </div>
+            """, unsafe_allow_html=True)
         
-        # Detailed cluster analysis
-        for cluster_id in sorted(cluster_skills.keys()):
-            if cluster_id == -1:
-                continue  # Skip unclustered
-            
+        with col2:
+            total_skills_all = sum(len(s) for s in valid_clusters.values())
+            st.markdown(f"""
+            <div class="metric-card">
+                <h3>{total_skills_all}</h3>
+                <p>Skills in Clusters</p>
+            </div>
+            """, unsafe_allow_html=True)
+        
+        with col3:
+            avg_offers = len(offers) / max(len(valid_clusters), 1)
+            st.markdown(f"""
+            <div class="metric-card">
+                <h3>{avg_offers:.0f}</h3>
+                <p>Avg. Offers/Cluster</p>
+            </div>
+            """, unsafe_allow_html=True)
+        
+        st.markdown("---")
+        
+        # Display each cluster
+        for cluster_id in sorted(valid_clusters.keys()):
             skills = cluster_skills[cluster_id]
             titles = cluster_titles[cluster_id]
+            cluster_offer_list = cluster_offers.get(cluster_id, [])
             
             skill_counter = Counter(skills)
-            top_cluster_skills = skill_counter.most_common(8)
-            
-            # Group titles by common patterns
+            top_cluster_skills = skill_counter.most_common(5)
             title_counter = Counter(titles)
-            top_titles = title_counter.most_common(5)
+            top_titles = title_counter.most_common(3)
             
-            col1, col2, col3 = st.columns([1, 2, 2])
+            # Determine cluster theme from top skills
+            theme_skills = ", ".join([s[0] for s in top_cluster_skills])
+            
+            st.markdown(f"""
+            <div class="cluster-box">
+                <h4>Cluster {cluster_id}: {theme_skills}</h4>
+            </div>
+            """, unsafe_allow_html=True)
+            
+            col1, col2, col3 = st.columns(3)
             
             with col1:
-                st.markdown(f"""
-                <div class="cluster-box">
-                    <h4>Cluster {cluster_id}</h4>
-                    <p><strong>Size:</strong> {len(titles)} offers</p>
-                    <p><strong>Unique Skills:</strong> {len(skill_counter)}</p>
-                </div>
-                """, unsafe_allow_html=True)
+                st.write(f"**Size:** {len(cluster_offer_list)} job offers")
+                st.write(f"**Skills:** {len(skills)} total")
             
             with col2:
                 st.write("**Top Job Titles:**")
                 for title, count in top_titles:
-                    st.write(f"- {title} ({count}x)")
+                    st.write(f"- {title} ({count})")
             
             with col3:
                 st.write("**Top Skills:**")
                 for skill, count in top_cluster_skills:
                     pct = (count / len(skills)) * 100 if skills else 0
                     st.write(f"- {skill} ({pct:.0f}%)")
+            
+            # Show sample job offers from this cluster
+            if cluster_offer_list:
+                with st.expander(f"See {len(cluster_offer_list)} job offers in this cluster"):
+                    for offer in cluster_offer_list[:5]:
+                        st.write(f"**{offer.get('title', 'Unknown')}**")
+                        location = offer.get('location', 'Unknown')
+                        st.caption(f"📍 {location}")
+                        if offer.get('skills_weighted'):
+                            skills_str = ", ".join([s.get('skill', '') if isinstance(s, dict) else str(s) for s in offer['skills_weighted'][:5]])
+                            st.write(f"Skills: {skills_str}...")
+                        st.divider()
+            
+            st.markdown("")  # Spacing
 
 # ====== PAGE 4: CV ANALYZER ======
 elif page == "CV Analyzer":
@@ -570,22 +630,26 @@ elif page == "CV Analyzer":
             
             # Personalized Recommendations
             st.subheader("🎯 Personalized Recommendations")
-            recommendations = get_recommendations(user_skills, user_title, offers)
+            _, _, cluster_offers_dict = get_cluster_info(offers, clusters)
+            cluster_skills_dict, _, _ = get_cluster_info(offers, clusters)
+            
+            recommendations = get_recommendations(user_skills, user_title, offers, cluster_skills_dict)
             
             if recommendations:
                 col1, col2 = st.columns([1, 2])
                 
                 with col1:
                     st.write("**Skills to Add (Priority Order):**")
-                    for i, rec in enumerate(recommendations[:5], 1):
-                        st.write(f"{i}. **{rec['skill']}** [{rec['priority']}]")
-                        st.write(f"   In {rec['frequency']} offers ({rec['score']*100:.1f}%)")
+                    for i, rec in enumerate(recommendations[:8], 1):
+                        clusters_text = f" (in {rec['in_clusters']} clusters)" if rec['in_clusters'] > 0 else ""
+                        st.write(f"{i}. **{rec['skill']}** [{rec['priority']}]{clusters_text}")
+                        st.write(f"   {rec['frequency']} offers ({rec['score']*100:.1f}%)")
                 
                 with col2:
                     st.write("**Why These Skills?**")
                     rec_html = "".join([
                         f'<span class="recommended-skill">{r["skill"]}</span>'
-                        for r in recommendations[:5]
+                        for r in recommendations[:8]
                     ])
                     st.markdown(rec_html, unsafe_allow_html=True)
                     st.write(f"\n*Based on analysis of {len(offers)} job offers*")
