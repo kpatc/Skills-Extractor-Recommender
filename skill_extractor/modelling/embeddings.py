@@ -20,6 +20,8 @@ class GeminiEmbedder:
 
     def __init__(self, api_key: Optional[str] = None):
         """Initialise l'embedder Gemini."""
+        from dotenv import load_dotenv
+        load_dotenv()  # Charger .env
         self.api_key = api_key or os.getenv("GEMINI_API_KEY")
         
         if not self.api_key:
@@ -105,46 +107,60 @@ class TFIDFEmbedder:
 
 
 class HybridEmbedder:
-    """Embedder hybride avec fallback automatique - BERT prioritaire."""
+    """Embedder hybride avec fallback automatique - Gemini prioritaire."""
 
     def __init__(self):
-        """Initialise avec fallback automatique: sentence-transformers > Gemini > TF-IDF"""
+        """Initialise avec fallback automatique: Gemini > TF-IDF"""
         self.embedder = None
         self.method = None
         
-        # PRIORITÉ 1: sentence-transformers (BERT) - Meilleur rapport performance/vitesse
+        # PRIORITÉ 1: Gemini API (meilleure qualité d'embeddings)
         try:
-            self.embedder = SentenceTransformerEmbedder()
-            self.method = "sentence_transformers"
-            logger.info("✓ Embedder: sentence-transformers (BERT) - ACTIVÉ")
-            return
-        except Exception as e:
-            logger.warning(f"sentence-transformers non disponible: {e}")
-        
-        # PRIORITÉ 2: Gemini (si API key disponible)
-        if os.getenv("GEMINI_API_KEY"):
-            try:
-                self.embedder = GeminiEmbedder()
+            from dotenv import load_dotenv
+            load_dotenv()  # Charger .env explicitement
+            
+            api_key = os.getenv("GEMINI_API_KEY")
+            if api_key:
+                logger.info(f"🔑 Clé Gemini trouvée: {api_key[:20]}...")
+                self.embedder = GeminiEmbedder(api_key=api_key)
                 self.method = "gemini"
-                logger.info("✓ Embedder: Gemini API")
+                logger.info("✓ Embedder: Gemini API - ACTIVÉ")
                 return
-            except Exception as e:
-                logger.warning(f"Gemini non disponible: {e}")
+            else:
+                logger.warning("⚠️  Clé GEMINI_API_KEY non trouvée dans .env")
+        except Exception as e:
+            logger.warning(f"⚠️  Gemini API non disponible: {e}")
+            logger.info("  → Passage au fallback TF-IDF...")
         
-        # FALLBACK: TF-IDF (dernier recours)
+        # FALLBACK: TF-IDF (si Gemini quota atteint ou non disponible)
         try:
             self.embedder = TFIDFEmbedder()
             self.method = "tfidf"
-            logger.warning("⚠️  Fallback: TF-IDF (performance limitée)")
+            logger.info("✓ Utilisation fallback: TF-IDF")
             return
         except Exception as e:
-            logger.error(f"Aucun embedder disponible: {e}")
+            logger.error(f"❌ Aucun embedder disponible: {e}")
             raise
 
     def encode(self, texts: List[str]) -> np.ndarray:
-        """Génère les embeddings."""
+        """Génère les embeddings avec retry automatique si Gemini échoue."""
         if not self.embedder:
-            raise RuntimeError("Aucun embedder")
+            raise RuntimeError("Aucun embedder disponible")
+        
+        # Si Gemini, essayer avec retry pour quota
+        if self.method == "gemini":
+            try:
+                return self.embedder.encode(texts)
+            except Exception as e:
+                logger.warning(f"⚠️  Gemini échoué (quota dépassé?): {e}")
+                logger.info("  → Fallback automatique vers TF-IDF...")
+                
+                # Basculer vers TF-IDF
+                self.embedder = TFIDFEmbedder()
+                self.method = "tfidf"
+                return self.embedder.encode(texts)
+        
+        # Sinon utiliser l'embedder actuel
         return self.embedder.encode(texts)
 
     def get_method(self) -> str:

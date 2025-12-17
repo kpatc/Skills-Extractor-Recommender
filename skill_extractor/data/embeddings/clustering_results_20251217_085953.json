@@ -1,0 +1,341 @@
+{
+  "timestamp": "20251217_085953",
+  "embedding_method": "tfidf",
+  "total_offers": 42,
+  "total_skills": 64,
+  "num_clusters": 5,
+  "skills_with_clusters": [
+    {
+      "skill": "AWS",
+      "cluster": 0
+    },
+    {
+      "skill": "Agile",
+      "cluster": 0
+    },
+    {
+      "skill": "Angular",
+      "cluster": 0
+    },
+    {
+      "skill": "Ansible",
+      "cluster": 0
+    },
+    {
+      "skill": "Azure",
+      "cluster": 0
+    },
+    {
+      "skill": "BDD",
+      "cluster": 0
+    },
+    {
+      "skill": "Bootstrap",
+      "cluster": 0
+    },
+    {
+      "skill": "CI/CD",
+      "cluster": 2
+    },
+    {
+      "skill": "CSS",
+      "cluster": 0
+    },
+    {
+      "skill": "Confluence",
+      "cluster": 0
+    },
+    {
+      "skill": "Docker",
+      "cluster": 0
+    },
+    {
+      "skill": "Edge Computing",
+      "cluster": 0
+    },
+    {
+      "skill": "Event-driven",
+      "cluster": 0
+    },
+    {
+      "skill": "FinOps",
+      "cluster": 0
+    },
+    {
+      "skill": "Firebase",
+      "cluster": 3
+    },
+    {
+      "skill": "Flutter",
+      "cluster": 0
+    },
+    {
+      "skill": "Flux",
+      "cluster": 0
+    },
+    {
+      "skill": "GCP",
+      "cluster": 0
+    },
+    {
+      "skill": "Git",
+      "cluster": 0
+    },
+    {
+      "skill": "GitLab",
+      "cluster": 2
+    },
+    {
+      "skill": "GitLab CI",
+      "cluster": 2
+    },
+    {
+      "skill": "Go",
+      "cluster": 0
+    },
+    {
+      "skill": "Google Cloud",
+      "cluster": 0
+    },
+    {
+      "skill": "Grafana",
+      "cluster": 0
+    },
+    {
+      "skill": "GraphQL",
+      "cluster": 0
+    },
+    {
+      "skill": "HTML",
+      "cluster": 0
+    },
+    {
+      "skill": "Hugging Face",
+      "cluster": 0
+    },
+    {
+      "skill": "JIRA",
+      "cluster": 0
+    },
+    {
+      "skill": "Java",
+      "cluster": 0
+    },
+    {
+      "skill": "JavaScript",
+      "cluster": 0
+    },
+    {
+      "skill": "Jenkins",
+      "cluster": 0
+    },
+    {
+      "skill": "Kotlin",
+      "cluster": 0
+    },
+    {
+      "skill": "Kubernetes",
+      "cluster": 0
+    },
+    {
+      "skill": "MATLAB",
+      "cluster": 0
+    },
+    {
+      "skill": "Microservices",
+      "cluster": 0
+    },
+    {
+      "skill": "MongoDB",
+      "cluster": 0
+    },
+    {
+      "skill": "MySQL",
+      "cluster": 0
+    },
+    {
+      "skill": "NestJS",
+      "cluster": 0
+    },
+    {
+      "skill": "Nestjs",
+      "cluster": 0
+    },
+    {
+      "skill": "Next.js",
+      "cluster": 0
+    },
+    {
+      "skill": "PHP",
+      "cluster": 0
+    },
+    {
+      "skill": "Pandas",
+      "cluster": 0
+    },
+    {
+      "skill": "PostgreSQL",
+      "cluster": 0
+    },
+    {
+      "skill": "Postman",
+      "cluster": 0
+    },
+    {
+      "skill": "Prometheus",
+      "cluster": 0
+    },
+    {
+      "skill": "PyTorch",
+      "cluster": 0
+    },
+    {
+      "skill": "Python",
+      "cluster": 0
+    },
+    {
+      "skill": "R",
+      "cluster": 0
+    },
+    {
+      "skill": "React",
+      "cluster": 0
+    },
+    {
+      "skill": "React Native",
+      "cluster": 0
+    },
+    {
+      "skill": "Redis",
+      "cluster": 0
+    },
+    {
+      "skill": "SQL Server",
+      "cluster": 1
+    },
+    {
+      "skill": "Scrum",
+      "cluster": 0
+    },
+    {
+      "skill": "Shell",
+      "cluster": 0
+    },
+    {
+      "skill": "Spring",
+      "cluster": 4
+    },
+    {
+      "skill": "Spring Boot",
+      "cluster": 4
+    },
+    {
+      "skill": "Sql",
+      "cluster": 1
+    },
+    {
+      "skill": "Swift",
+      "cluster": 0
+    },
+    {
+      "skill": "TensorFlow",
+      "cluster": 0
+    },
+    {
+      "skill": "Transformers",
+      "cluster": 0
+    },
+    {
+      "skill": "TypeScript",
+      "cluster": 0
+    },
+    {
+      "skill": "Vue",
+      "cluster": 0
+    },
+    {
+      "skill": "Vue.js",
+      "cluster": 0
+    },
+    {
+      "skill": "jQuery",
+      "cluster": 0
+    }
+  ],
+  "cluster_analysis": {
+    "0": [
+      "AWS",
+      "Agile",
+      "Angular",
+      "Ansible",
+      "Azure",
+      "BDD",
+      "Bootstrap",
+      "CSS",
+      "Confluence",
+      "Docker",
+      "Edge Computing",
+      "Event-driven",
+      "FinOps",
+      "Flutter",
+      "Flux",
+      "GCP",
+      "Git",
+      "Go",
+      "Google Cloud",
+      "Grafana",
+      "GraphQL",
+      "HTML",
+      "Hugging Face",
+      "JIRA",
+      "Java",
+      "JavaScript",
+      "Jenkins",
+      "Kotlin",
+      "Kubernetes",
+      "MATLAB",
+      "Microservices",
+      "MongoDB",
+      "MySQL",
+      "NestJS",
+      "Nestjs",
+      "Next.js",
+      "PHP",
+      "Pandas",
+      "PostgreSQL",
+      "Postman",
+      "Prometheus",
+      "PyTorch",
+      "Python",
+      "R",
+      "React",
+      "React Native",
+      "Redis",
+      "Scrum",
+      "Shell",
+      "Swift",
+      "TensorFlow",
+      "Transformers",
+      "TypeScript",
+      "Vue",
+      "Vue.js",
+      "jQuery"
+    ],
+    "1": [
+      "SQL Server",
+      "Sql"
+    ],
+    "2": [
+      "CI/CD",
+      "GitLab",
+      "GitLab CI"
+    ],
+    "3": [
+      "Firebase"
+    ],
+    "4": [
+      "Spring",
+      "Spring Boot"
+    ]
+  }
+}

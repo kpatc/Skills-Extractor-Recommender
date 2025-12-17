@@ -344,11 +344,11 @@ def scrape_all_sources(test_mode=False, min_offers=200) -> List[Dict]:
         logger.info(f"SCRAPING RÉEL (BeautifulSoup + requests) - {min_offers} offres minimum")
         logger.info(f"{'='*80}\n")
         
-        # 1️⃣ REKRUTE - PRIORITÉ (Maroc) - 30 pages avec vraies URLs
-        logger.info("🔄 ReKrute (Maroc) - PRIORITÉ (30 pages)...")
+        # 1️⃣ REKRUTE - PRIORITÉ (Maroc) - 50 pages avec vraies URLs
+        logger.info("🔄 ReKrute (Maroc) - PRIORITÉ (90 pages)...")
         try:
             # URLs: ?p=1&s=1&o=1, ?p=2&s=1&o=1, etc. - vraie pagination
-            rekrute_offers = scrape_rekrute(num_pages=30)
+            rekrute_offers = scrape_rekrute(num_pages=90)
             if rekrute_offers:
                 all_offers.extend(rekrute_offers)
                 logger.info(f"✅ {len(rekrute_offers)} offres ReKrute\n")
@@ -357,18 +357,9 @@ def scrape_all_sources(test_mode=False, min_offers=200) -> List[Dict]:
         except Exception as e:
             logger.warning(f"❌ Erreur ReKrute: {e}\n")
         
-        # 2️⃣ GITHUB CAREERS - Web Scraping (real job data with full descriptions)
-        if len(all_offers) < min_offers:
-            logger.info("🔄 GitHub Careers (web scraping 15 pages)...")
-            try:
-                github_offers = scrape_github_careers(pages=15)
-                if github_offers:
-                    all_offers.extend(github_offers)
-                    logger.info(f"✅ {len(github_offers)} offres GitHub Careers\n")
-                else:
-                    logger.warning("⚠️  0 offres GitHub Careers\n")
-            except Exception as e:
-                logger.warning(f"❌ Erreur GitHub Careers: {e}\n")
+        # 2️⃣ GITHUB CAREERS - Désactivé pour le moment (chargement JS)
+        # Nous avons assez de données ReKrute pour le NLP
+        logger.info("⏭️  GitHub Careers (désactivé pour le moment - chargement JS complexe)\n")
 
     logger.info(f"\n{'='*80}")
     logger.info(f"RÉSUMÉ SCRAPING - {len(all_offers)} offres totales")
@@ -404,7 +395,25 @@ def scrape_rekrute(num_pages: int = 10) -> List[Dict]:
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
     })
     
-    # VERY STRICT TECH JOB TITLES - must match one of these patterns
+    # TECH KEYWORDS - required for matching with "ingénieur"
+    tech_keywords = [
+        # Programming languages
+        r'\bpython\b', r'\bjava\b', r'\bjavascript\b', r'\bc\+\+\b', r'\bc#\b',
+        r'\bphp\b', r'\bruby\b', r'\bgo\b', r'\brust\b', r'\bkotlin\b', r'\bswift\b',
+        r'\btypescript\b', r'\bcsharp\b',
+        # Frameworks/Tools
+        r'\breact\b', r'\bvue\b', r'\bangular\b', r'\bnode\b', r'\bdjango\b',
+        r'\bspring\b', r'\blayrell\b', r'\bflask\b', r'\bdocker\b', r'\bkubernetes\b',
+        r'\baws\b', r'\bazure\b', r'\bgcp\b', r'\bdevops\b', r'\bci/cd\b',
+        # Databases
+        r'\bsql\b', r'\bpostgres\b', r'\bmongo\b', r'\bnosql\b', r'\bOracle\b',
+        # Tech roles
+        r'\bbackend\b', r'\bfrontend\b', r'\bfullstack\b', r'\bdevops\b',
+        r'\bdata\s+engineer\b', r'\bml\s+engineer\b', r'\bmachine\s+learning\b',
+        r'\bcloud\b', r'\barchitect\b', r'\bsecurity\b', r'\bqa\s+automation\b',
+    ]
+    
+    # VERY STRICT TECH JOB TITLES
     tech_job_patterns = [
         # English
         r'\bsoftware\s+engineer\b',
@@ -423,8 +432,10 @@ def scrape_rekrute(num_pages: int = 10) -> List[Dict]:
         r'\bsystem\s+admin\b',
         r'\bnetwork\s+engineer\b',
         r'\bproduct\s+owner\b',
-        # French
-        r'\bingénieur\s+\w+',
+        # French - Engineer + Tech Keywords
+        r'\bingénieur\s+(logiciel|développement|systèmes|réseau|sécurité|données|devops|cloud|informatique)\b',
+        r'\bingénieur\b.*?(python|java|javascript|php|rust|go|react|docker|kubernetes|aws|azure|spring|django|node)',
+        # Other French tech roles
         r'\bdéveloppeur\b',
         r'\bprogrammeur\b',
         r'\barchitecte\b',
@@ -433,10 +444,6 @@ def scrape_rekrute(num_pages: int = 10) -> List[Dict]:
         r'\bqa\s+automation\b',
         r'\bdevops\b',
         r'\bengénierie\b',
-        r'\bpython\b',
-        r'\bjava\b',
-        r'\bjavascript\b',
-        r'\bc\+\+\b',
     ]
     
     # HARD EXCLUDE - non-tech jobs
@@ -464,13 +471,26 @@ def scrape_rekrute(num_pages: int = 10) -> List[Dict]:
     ]
     
     def is_strictly_tech_job(title: str) -> bool:
-        """VERY STRICT - title MUST match tech pattern AND NOT match exclude pattern."""
+        """VERY STRICT - title MUST match tech pattern AND NOT match exclude pattern.
+        Special case: 'ingénieur' must be followed by tech keywords."""
         title_lower = title.lower()
         
         # Hard exclude first
         for pattern in exclude_patterns:
             if re.search(pattern, title_lower):
                 return False
+        
+        # Check for 'ingénieur' - must have tech keywords nearby
+        if 'ingénieur' in title_lower:
+            has_tech_keyword = False
+            for keyword in tech_keywords:
+                if re.search(keyword, title_lower):
+                    has_tech_keyword = True
+                    break
+            if has_tech_keyword:
+                return True
+            else:
+                return False  # 'ingénieur' without tech keywords = rejected
         
         # Must match at least ONE tech pattern
         for pattern in tech_job_patterns:
@@ -522,27 +542,71 @@ def scrape_rekrute(num_pages: int = 10) -> List[Dict]:
                 
                 page_count += 1
                 
-                # Scrape full details
+                # Scrape full details with specific sections
                 description = ""
+                technical_skills = ""
+                required_profile = ""
+                responsibilities = ""
+                
                 try:
                     job_url = urljoin("https://www.rekrute.com", href)
                     job_response = session.get(job_url, timeout=8)
                     if job_response.status_code == 200:
                         job_soup = BeautifulSoup(job_response.text, "html.parser")
                         
-                        # Extract full description
-                        desc_sections = []
-                        for elem in job_soup.find_all(["p", "div", "li"]):
-                            text = clean_text(elem.get_text())
-                            if text and len(text) > 20:
-                                desc_sections.append(text)
+                        # Extract specific sections
+                        all_text = clean_text(job_soup.get_text())
                         
-                        if desc_sections:
-                            description = " ".join(desc_sections)[:3000]
+                        # Look for specific section headers and extract content
+                        text_lines = all_text.split('\n')
+                        current_section = ""
+                        sections = {
+                            "compétences_techniques": [],
+                            "profil_recherché": [],
+                            "responsabilités": [],
+                            "autres": []
+                        }
+                        
+                        for line in text_lines:
+                            line = line.strip()
+                            if not line:
+                                continue
+                            
+                            # Detect section headers
+                            if any(header in line.lower() for header in 
+                                   ["compétences techniques", "skills requis", "technical skills", 
+                                    "compétences", "skills"]):
+                                current_section = "compétences_techniques"
+                            elif any(header in line.lower() for header in 
+                                     ["profil recherché", "profile recherché", "profile required", 
+                                      "what we're looking for", "qui êtes-vous", "candidate profile"]):
+                                current_section = "profil_recherché"
+                            elif any(header in line.lower() for header in 
+                                     ["responsabilités", "responsibilities", "vos missions", "missions", "rôle"]):
+                                current_section = "responsabilités"
+                            else:
+                                if current_section:
+                                    sections[current_section].append(line)
+                                else:
+                                    sections["autres"].append(line)
+                        
+                        # Combine sections into structured description
+                        technical_skills = " ".join(sections["compétences_techniques"])[:1000]
+                        required_profile = " ".join(sections["profil_recherché"])[:1000]
+                        responsibilities = " ".join(sections["responsabilités"])[:1000]
+                        
+                        # If no specific sections found, use full text
+                        if not (technical_skills or required_profile or responsibilities):
+                            description = all_text[:3000]
                         else:
-                            body = job_soup.find("body")
-                            if body:
-                                description = clean_text(body.get_text())[:3000]
+                            description = (
+                                (technical_skills + " ") if technical_skills else ""
+                            ) + (
+                                (required_profile + " ") if required_profile else ""
+                            ) + (
+                                (responsibilities + " ") if responsibilities else ""
+                            )
+                            description = description[:3000]
                     
                     time.sleep(0.3)
                 except Exception as e:

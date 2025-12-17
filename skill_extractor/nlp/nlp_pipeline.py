@@ -5,16 +5,15 @@ Combine nettoyage de texte + extraction de compétences.
 
 import logging
 import sys
+import json
 from typing import List, Dict, Tuple
 from pathlib import Path
-import pandas as pd
+from datetime import datetime
 
 sys.path.insert(0, str(Path(__file__).parent.parent.absolute()))
 
-from .text_cleaner import get_cleaner, TextCleaner
-from .skills_extractor_v2 import (
-    get_skill_extractor, extract_skills_from_jobs, get_top_skills
-)
+from .text_cleaner import TextCleaner
+from .advanced_skills_extractor import SkillsExtractor
 
 logger = logging.getLogger(__name__)
 
@@ -24,9 +23,9 @@ class NLPPipeline:
 
     def __init__(self):
         """Initialise le pipeline NLP."""
-        self.cleaner = get_cleaner()
-        self.skill_extractor = get_skill_extractor()
-        logger.info("NLPPipeline initialized")
+        self.cleaner = TextCleaner()
+        self.skill_extractor = SkillsExtractor()
+        logger.info("NLPPipeline initialized with TextCleaner and SkillsExtractor")
 
     def process_job_offers(self, jobs: List[Dict]) -> List[Dict]:
         """
@@ -50,25 +49,40 @@ class NLPPipeline:
                 processed_job = job.copy()
                 
                 # 1. Nettoyage du texte
-                if 'description' in job and job['description']:
-                    cleaned_desc = self.cleaner.clean(
-                        job['description'],
-                        remove_stopwords=False  # Garder les stopwords pour extraction
-                    )
+                description = job.get('description', '')
+                title = job.get('title', '')
+                
+                if description:
+                    cleaned_desc = self.cleaner.clean(description, remove_stopwords=False)
                     processed_job['description_cleaned'] = cleaned_desc
+                else:
+                    cleaned_desc = ""
+                    processed_job['description_cleaned'] = ""
                 
-                if 'title' in job and job['title']:
-                    cleaned_title = self.cleaner.clean(job['title'], remove_stopwords=False)
+                if title:
+                    cleaned_title = self.cleaner.clean(title, remove_stopwords=False)
                     processed_job['title_cleaned'] = cleaned_title
+                else:
+                    cleaned_title = ""
+                    processed_job['title_cleaned'] = ""
                 
-                # 2. Extraction des compétences (utiliser le texte original ou nettoyé)
-                combined_text = f"{job.get('title', '')} {job.get('description', '')}"
-                skills_categorized = self.skill_extractor.extract_skills_categorized(combined_text)
-                skills_flat = self.skill_extractor.extract_skills_flat(combined_text)
+                # 2. Extraction des compétences (utiliser texte original + title)
+                combined_text = f"{title} {description}"
                 
-                processed_job['skills_categorized'] = skills_categorized
-                processed_job['skills'] = skills_flat
-                processed_job['num_skills'] = len(skills_flat)
+                # Extraire skills avec la méthode pondérée qui exploite les sections
+                extracted_skills, weighted_skills = self.skill_extractor.extract_skills_weighted(
+                    description=combined_text,
+                    title=title
+                )
+                
+                # Garder les skills dans un format structuré
+                processed_job['skills'] = extracted_skills
+                processed_job['skills_weighted'] = [
+                    {"skill": skill, "weight": float(weight)} 
+                    for skill, weight in weighted_skills
+                ][:20]  # Garder top 20
+                processed_job['num_skills'] = len(extracted_skills)
+                processed_job['processed_at'] = datetime.now().isoformat()
                 
                 processed_jobs.append(processed_job)
                 
@@ -95,79 +109,65 @@ class NLPPipeline:
         total_jobs = len(processed_jobs)
         jobs_with_skills = sum(1 for job in processed_jobs if job.get('skills'))
         total_unique_skills = set()
-        skills_by_category = {}
+        skills_frequency = {}
         
         for job in processed_jobs:
-            if 'skills' in job:
-                total_unique_skills.update(job['skills'])
-            
-            if 'skills_categorized' in job:
-                for category, skills in job['skills_categorized'].items():
-                    if category not in skills_by_category:
-                        skills_by_category[category] = set()
-                    skills_by_category[category].update(skills)
+            if 'skills' in job and job['skills']:
+                for skill in job['skills']:
+                    total_unique_skills.add(skill)
+                    skills_frequency[skill] = skills_frequency.get(skill, 0) + 1
         
         # Top 20 skills
-        top_skills = get_top_skills(processed_jobs, top_n=20)
+        top_skills = sorted(
+            skills_frequency.items(),
+            key=lambda x: x[1],
+            reverse=True
+        )[:20]
         
         return {
             'total_jobs': total_jobs,
             'jobs_with_skills': jobs_with_skills,
+            'coverage': round((jobs_with_skills / total_jobs * 100) if total_jobs > 0 else 0, 2),
             'total_unique_skills': len(total_unique_skills),
-            'skills_by_category': {k: len(v) for k, v in skills_by_category.items()},
             'top_20_skills': top_skills,
         }
 
     def save_processed_jobs(self, processed_jobs: List[Dict], output_path: str):
         """
-        Sauvegarde les offres traitées dans un CSV.
+        Sauvegarde les offres traitées dans un fichier JSON.
         
         Args:
             processed_jobs: Offres traitées
-            output_path: Chemin du fichier CSV de sortie
+            output_path: Chemin du fichier JSON de sortie
         """
-        logger.info(f"Saving processed jobs to {output_path}...")
+        logger.info(f"Saving {len(processed_jobs)} processed jobs to {output_path}...")
         
-        # Convertir les listes et dicts en strings pour le CSV
-        df_data = []
+        # Créer le répertoire s'il n'existe pas
+        Path(output_path).parent.mkdir(parents=True, exist_ok=True)
         
-        for job in processed_jobs:
-            row = {
-                'job_id': job.get('job_id', ''),
-                'title': job.get('title', ''),
-                'company': job.get('company', ''),
-                'location': job.get('location', ''),
-                'source': job.get('source', ''),
-                'description': job.get('description', '')[:500],  # Limiter pour readabilité
-                'title_cleaned': job.get('title_cleaned', ''),
-                'skills': ' | '.join(job.get('skills', [])),
-                'num_skills': job.get('num_skills', 0),
-                'scrape_date': job.get('scrape_date', ''),
-            }
-            df_data.append(row)
+        # Sauvegarder en JSON
+        with open(output_path, 'w', encoding='utf-8') as f:
+            json.dump(processed_jobs, f, ensure_ascii=False, indent=2)
         
-        df = pd.DataFrame(df_data)
-        df.to_csv(output_path, index=False, encoding='utf-8')
-        
-        logger.info(f"Saved {len(df_data)} jobs to {output_path}")
+        logger.info(f"✅ Saved {len(processed_jobs)} processed jobs to {output_path}")
 
 
-def process_csv_file(input_csv: str, output_csv: str) -> Dict:
+def process_json_file(input_json: str, output_json: str) -> Dict:
     """
-    Traite un fichier CSV d'offres brutes.
+    Traite un fichier JSON d'offres brutes (de la scraping).
     
     Args:
-        input_csv: Chemin du CSV raw (de la scraping)
-        output_csv: Chemin du CSV processed (avec skills)
+        input_json: Chemin du JSON raw (de la scraping)
+        output_json: Chemin du JSON processed (avec skills)
     
     Returns:
         Stats de traitement
     """
-    logger.info(f"Loading jobs from {input_csv}...")
+    logger.info(f"Loading jobs from {input_json}...")
     
     # Charger les offres
-    df = pd.read_csv(input_csv)
-    jobs = df.to_dict('records')
+    with open(input_json, 'r', encoding='utf-8') as f:
+        jobs = json.load(f)
     
     logger.info(f"Loaded {len(jobs)} jobs")
     
@@ -176,24 +176,22 @@ def process_csv_file(input_csv: str, output_csv: str) -> Dict:
     processed_jobs = pipeline.process_job_offers(jobs)
     
     # Sauvegarder
-    pipeline.save_processed_jobs(processed_jobs, output_csv)
+    pipeline.save_processed_jobs(processed_jobs, output_json)
     
     # Stats
     stats = pipeline.get_statistics(processed_jobs)
     
-    logger.info("=" * 60)
-    logger.info("NLP PROCESSING STATISTICS")
-    logger.info("=" * 60)
+    logger.info("=" * 80)
+    logger.info("🎯 NLP PROCESSING STATISTICS")
+    logger.info("=" * 80)
     logger.info(f"Total jobs processed: {stats['total_jobs']}")
-    logger.info(f"Jobs with skills: {stats['jobs_with_skills']}")
-    logger.info(f"Total unique skills: {stats['total_unique_skills']}")
-    logger.info("\nSkills by category:")
-    for cat, count in stats['skills_by_category'].items():
-        logger.info(f"  {cat}: {count} unique skills")
+    logger.info(f"Jobs with skills extracted: {stats['jobs_with_skills']}")
+    logger.info(f"Coverage: {stats['coverage']}%")
+    logger.info(f"Total unique skills found: {stats['total_unique_skills']}")
     logger.info("\nTop 20 Most Demanded Skills:")
-    for skill, count in stats['top_20_skills']:
-        logger.info(f"  {skill}: {count} offers")
-    logger.info("=" * 60)
+    for rank, (skill, count) in enumerate(stats['top_20_skills'], 1):
+        logger.info(f"  {rank:2d}. {skill:<30s} {count:3d} offers")
+    logger.info("=" * 80)
     
     return stats
 

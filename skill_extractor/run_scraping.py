@@ -27,7 +27,7 @@ def run_scraping_pipeline():
     logger.info("🌐 Starting real job scraping from ReKrute and LinkedIn...")
     
     # Use scrape_all_sources which handles filtering internally
-    offers = scrape_all_sources(test_mode=False, min_offers=50)
+    offers = scrape_all_sources(test_mode=False, min_offers=30)
     
     if not offers:
         logger.error("❌ No offers scraped")
@@ -44,6 +44,7 @@ def run_scraping_pipeline():
     with open(json_file, 'w', encoding='utf-8') as f:
         json.dump(offers, f, ensure_ascii=False, indent=2)
     
+    return offers
 
 
 if __name__ == "__main__":
