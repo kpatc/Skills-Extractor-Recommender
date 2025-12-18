@@ -117,24 +117,44 @@ def load_modelling_results():
     """Load clustering and embeddings results"""
     # Try both locations
     possible_dirs = [
-        script_dir / "data" / "embeddings",
-        Path("/home/josh/ProjectTD/skill_extractor/data/embeddings"),
         script_dir / "data" / "processed",
+        Path("/home/josh/ProjectTD/skill_extractor/data/processed"),
     ]
     
-    clusters = {}
+    cluster_stats = {}
     for data_dir in possible_dirs:
         if data_dir.exists():
-            clusters_files = sorted(data_dir.glob("clustering_results_*.json"))
-            if clusters_files:
+            stats_files = sorted(data_dir.glob("cluster_stats_*.json"))
+            if stats_files:
                 try:
-                    with open(clusters_files[-1], 'r', encoding='utf-8') as f:
-                        clusters = json.load(f)
+                    with open(stats_files[-1], 'r', encoding='utf-8') as f:
+                        cluster_stats = json.load(f)
                     break
                 except:
                     continue
     
-    return clusters
+    return cluster_stats
+
+@st.cache_data
+def load_clustered_offers():
+    """Load offers with cluster assignments"""
+    possible_dirs = [
+        script_dir / "data" / "processed",
+        Path("/home/josh/ProjectTD/skill_extractor/data/processed"),
+    ]
+    
+    for data_dir in possible_dirs:
+        if data_dir.exists():
+            clustered_files = sorted(data_dir.glob("offers_clustered_*.json"))
+            if clustered_files:
+                try:
+                    with open(clustered_files[-1], 'r', encoding='utf-8') as f:
+                        return json.load(f)
+                except:
+                    continue
+    
+    # Fallback to processed offers
+    return load_processed_offers()
 
 # ====== DATA PROCESSING ======
 
@@ -473,13 +493,38 @@ elif page == "Clusters Analysis":
     st.title("🎯 Job Clusters Analysis")
     st.markdown("Jobs grouped by skill similarity - Each cluster represents a job family")
     
-    if not offers:
-        st.error("No data available")
+    clustered_offers = load_clustered_offers()
+    cluster_stats = load_modelling_results()
+    
+    if not clustered_offers or not cluster_stats:
+        st.error("No clustering data available. Please run clustering first.")
     else:
-        cluster_skills, cluster_titles, cluster_offers = get_cluster_info(offers, clusters)
+        # Get cluster info
+        cluster_info = {}
+        for offer in clustered_offers:
+            cluster_id = offer.get('cluster', -1)
+            if cluster_id not in cluster_info:
+                cluster_info[cluster_id] = {
+                    'offers': [],
+                    'skills': [],
+                    'titles': []
+                }
+            cluster_info[cluster_id]['offers'].append(offer)
+            
+            # Collect skills
+            skills_weighted = offer.get('skills_weighted', [])
+            for skill_obj in skills_weighted:
+                skill = skill_obj.get('skill', '') if isinstance(skill_obj, dict) else str(skill_obj)
+                if skill:
+                    cluster_info[cluster_id]['skills'].append(skill)
+            
+            # Collect titles
+            title = offer.get('title', '')
+            if title:
+                cluster_info[cluster_id]['titles'].append(title)
         
-        # Filter out unclustered
-        valid_clusters = {k: v for k, v in cluster_skills.items() if k != -1}
+        # Overview metrics
+        valid_clusters = {k: v for k, v in cluster_info.items() if k != -1}
         
         st.subheader("Overview")
         col1, col2, col3 = st.columns(3)
@@ -493,19 +538,19 @@ elif page == "Clusters Analysis":
             """, unsafe_allow_html=True)
         
         with col2:
-            total_skills_all = sum(len(s) for s in valid_clusters.values())
+            total_offers_clustered = sum(len(v['offers']) for v in valid_clusters.values())
             st.markdown(f"""
             <div class="metric-card">
-                <h3>{total_skills_all}</h3>
-                <p>Skills in Clusters</p>
+                <h3>{total_offers_clustered}</h3>
+                <p>Clustered Offers</p>
             </div>
             """, unsafe_allow_html=True)
         
         with col3:
-            avg_offers = len(offers) / max(len(valid_clusters), 1)
+            avg_offers = total_offers_clustered / max(len(valid_clusters), 1)
             st.markdown(f"""
             <div class="metric-card">
-                <h3>{avg_offers:.0f}</h3>
+                <h3>{avg_offers:.1f}</h3>
                 <p>Avg. Offers/Cluster</p>
             </div>
             """, unsafe_allow_html=True)
@@ -514,81 +559,92 @@ elif page == "Clusters Analysis":
         
         # Display each cluster
         for cluster_id in sorted(valid_clusters.keys()):
-            skills = cluster_skills[cluster_id]
-            titles = cluster_titles[cluster_id]
-            cluster_offer_list = cluster_offers.get(cluster_id, [])
+            cluster_data = cluster_info[cluster_id]
+            offers_in_cluster = cluster_data['offers']
+            skills_in_cluster = cluster_data['skills']
+            titles_in_cluster = cluster_data['titles']
             
-            skill_counter = Counter(skills)
-            top_cluster_skills = skill_counter.most_common(5)
-            title_counter = Counter(titles)
+            # Get top skills
+            skill_counter = Counter(skills_in_cluster)
+            top_skills = skill_counter.most_common(5)
+            
+            # Get top titles
+            title_counter = Counter(titles_in_cluster)
             top_titles = title_counter.most_common(3)
             
-            # Determine cluster theme from top skills
-            theme_skills = ", ".join([s[0] for s in top_cluster_skills])
+            # Determine cluster theme
+            if top_skills:
+                theme = ", ".join([s[0] for s in top_skills])
+            else:
+                theme = "Mixed"
             
             st.markdown(f"""
             <div class="cluster-box">
-                <h4>Cluster {cluster_id}: {theme_skills}</h4>
+                <h4>Cluster {cluster_id}: {theme}</h4>
             </div>
             """, unsafe_allow_html=True)
             
-            col1, col2, col3 = st.columns(3)
+            col1, col2 = st.columns([1, 2])
             
             with col1:
-                st.write(f"**Size:** {len(cluster_offer_list)} job offers")
-                st.write(f"**Skills:** {len(skills)} total")
-            
-            with col2:
+                st.write(f"**Size:** {len(offers_in_cluster)} offers")
+                st.write(f"**Unique Skills:** {len(skill_counter)}")
                 st.write("**Top Job Titles:**")
                 for title, count in top_titles:
-                    st.write(f"- {title} ({count})")
+                    st.write(f"- {title[:50]}... ({count})")
             
-            with col3:
-                st.write("**Top Skills:**")
-                for skill, count in top_cluster_skills:
-                    pct = (count / len(skills)) * 100 if skills else 0
-                    st.write(f"- {skill} ({pct:.0f}%)")
+            with col2:
+                st.write("**Top Skills Required:**")
+                for skill, count in top_skills:
+                    pct = (count / len(offers_in_cluster)) * 100 if offers_in_cluster else 0
+                    st.write(f"- {skill}: {count} offers ({pct:.0f}%)")
+            
+            st.markdown("---")
             
             # Show sample job offers from this cluster
-            if cluster_offer_list:
-                with st.expander(f"See {len(cluster_offer_list)} job offers in this cluster"):
-                    for offer in cluster_offer_list[:5]:
-                        st.write(f"**{offer.get('title', 'Unknown')}**")
-                        location = offer.get('location', 'Unknown')
-                        st.caption(f"📍 {location}")
-                        if offer.get('skills_weighted'):
-                            skills_str = ", ".join([s.get('skill', '') if isinstance(s, dict) else str(s) for s in offer['skills_weighted'][:5]])
-                            st.write(f"Skills: {skills_str}...")
-                        st.divider()
+            with st.expander(f"See {len(offers_in_cluster)} job offers in this cluster"):
+                for offer in offers_in_cluster[:5]:
+                    st.write(f"**{offer.get('title', 'Unknown')}**")
+                    location = offer.get('location', 'Unknown')
+                    st.caption(f"📍 {location}")
+                    if offer.get('skills_weighted'):
+                        skills_str = ", ".join([s.get('skill', '') if isinstance(s, dict) else str(s) for s in offer['skills_weighted'][:5]])
+                        st.write(f"Skills: {skills_str}...")
+                    st.divider()
             
             st.markdown("")  # Spacing
 
 # ====== PAGE 4: CV ANALYZER ======
 elif page == "CV Analyzer":
     st.title("📄 CV Skill Analyzer")
-    st.markdown("Analyze your CV and get personalized recommendations")
+    st.markdown("Analyze your skills and get personalized recommendations")
     
     if not offers:
         st.error("No job data available")
     else:
+        st.subheader("Your Profile")
         col1, col2 = st.columns(2)
         
         with col1:
-            st.subheader("Your Profile")
             user_title = st.text_input(
                 "Job Title",
                 value="Software Developer",
-                placeholder="e.g., Senior Python Developer"
+                placeholder="e.g., Senior Python Developer",
+                key="title_input"
             )
         
         with col2:
-            st.subheader("Your Skills")
-            user_skills_text = st.text_area(
-                "Enter your skills (comma-separated)",
-                value="Python, JavaScript, React, Docker",
-                placeholder="e.g., Python, Java, SQL, Docker...",
-                height=100
-            )
+            st.write("")  # Spacer
+            st.write("")  # Spacer
+        
+        st.subheader("Your Skills")
+        user_skills_text = st.text_area(
+            "Enter your skills (comma-separated)",
+            value="Python, JavaScript, React, Docker",
+            placeholder="e.g., Python, Java, SQL, Docker...",
+            height=100,
+            key="skills_input"
+        )
         
         user_skills = [s.strip() for s in user_skills_text.split(',') if s.strip()]
         
@@ -630,10 +686,7 @@ elif page == "CV Analyzer":
             
             # Personalized Recommendations
             st.subheader("🎯 Personalized Recommendations")
-            _, _, cluster_offers_dict = get_cluster_info(offers, clusters)
-            cluster_skills_dict, _, _ = get_cluster_info(offers, clusters)
-            
-            recommendations = get_recommendations(user_skills, user_title, offers, cluster_skills_dict)
+            recommendations = get_recommendations(user_skills, user_title, offers)
             
             if recommendations:
                 col1, col2 = st.columns([1, 2])

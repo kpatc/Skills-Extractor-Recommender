@@ -1,0 +1,273 @@
+{
+  "2": {
+    "size": 2,
+    "top_skills": [
+      {
+        "skill": "Agile",
+        "count": 2
+      },
+      {
+        "skill": "Postman",
+        "count": 1
+      }
+    ],
+    "top_titles": [
+      {
+        "title": "QA Automation Mobile IOS/Android/Back | Casablanca (Maroc)",
+        "count": 1
+      },
+      {
+        "title": "Product Owner (H/ F) | Casablanca (Maroc)",
+        "count": 1
+      }
+    ],
+    "description": "Cluster 2: QA Automation Mobile IOS/Android/Back | Casablanca (Maroc)"
+  },
+  "5": {
+    "size": 4,
+    "top_skills": [],
+    "top_titles": [
+      {
+        "title": "B2 - Certifying Engineer | Casablanca (Maroc)",
+        "count": 1
+      },
+      {
+        "title": "Business Developer – Spécialiste du Closing (WeClose) | Casablanca (Maroc)",
+        "count": 1
+      },
+      {
+        "title": "QA specialist / Engineer | Jorf Lasfar / region of ELJADIDA (Maroc)",
+        "count": 1
+      },
+      {
+        "title": "Business Developer Senior (B2B – Prospection & Rendez-vous Qualifiés) | Casablanca (Maroc)",
+        "count": 1
+      }
+    ],
+    "description": "Cluster 5: B2 - Certifying Engineer | Casablanca (Maroc)"
+  },
+  "-1": {
+    "size": 25,
+    "top_skills": [
+      {
+        "skill": "Sql",
+        "count": 9
+      },
+      {
+        "skill": "Python",
+        "count": 7
+      },
+      {
+        "skill": "CI/CD",
+        "count": 6
+      },
+      {
+        "skill": "R",
+        "count": 5
+      },
+      {
+        "skill": "Git",
+        "count": 4
+      },
+      {
+        "skill": "JavaScript",
+        "count": 4
+      },
+      {
+        "skill": "PHP",
+        "count": 4
+      },
+      {
+        "skill": "React",
+        "count": 4
+      },
+      {
+        "skill": "Flux",
+        "count": 4
+      },
+      {
+        "skill": "Java",
+        "count": 4
+      }
+    ],
+    "top_titles": [
+      {
+        "title": "Concepteur Développeur Python / Ansible (H/ F) | Rabat (Maroc)",
+        "count": 1
+      },
+      {
+        "title": "Concepteur Développeur .Net (F/H) | Rabat (Maroc)",
+        "count": 1
+      },
+      {
+        "title": "Senior AI Engineer | Rabat (Maroc)",
+        "count": 1
+      },
+      {
+        "title": "Ingénieur Devops (F/H) | Technopolis (Maroc)",
+        "count": 1
+      },
+      {
+        "title": "Développeur Full Stack ( H/F ) | Casablanca (Maroc)",
+        "count": 1
+      }
+    ],
+    "description": "Cluster -1: Concepteur Développeur Python / Ansible (H/ F) | Rabat (Maroc)"
+  },
+  "6": {
+    "size": 2,
+    "top_skills": [
+      {
+        "skill": "Python",
+        "count": 2
+      },
+      {
+        "skill": "Edge Computing",
+        "count": 1
+      }
+    ],
+    "top_titles": [
+      {
+        "title": "Tech Lead développeur Python (F/H) | Rabat (Maroc)",
+        "count": 1
+      },
+      {
+        "title": "Ingénieur QOS/QOD (Python, KAFKA) H/F | Rabat (Maroc)",
+        "count": 1
+      }
+    ],
+    "description": "Cluster 6: Tech Lead développeur Python (F/H) | Rabat (Maroc)"
+  },
+  "1": {
+    "size": 2,
+    "top_skills": [
+      {
+        "skill": "Flux",
+        "count": 2
+      },
+      {
+        "skill": "Sql",
+        "count": 2
+      },
+      {
+        "skill": "Python",
+        "count": 2
+      },
+      {
+        "skill": "Agile",
+        "count": 2
+      }
+    ],
+    "top_titles": [
+      {
+        "title": "Data Engineer Confirmée - Microsoft Fabric | Casablanca (Maroc)",
+        "count": 1
+      },
+      {
+        "title": "Data Engineer PYTHON / SPARK - Confirmé /Expert (H/F) | Rabat (Maroc)",
+        "count": 1
+      }
+    ],
+    "description": "Cluster 1: Data Engineer Confirmée - Microsoft Fabric | Casablanca (Maroc)"
+  },
+  "4": {
+    "size": 3,
+    "top_skills": [
+      {
+        "skill": "R",
+        "count": 3
+      }
+    ],
+    "top_titles": [
+      {
+        "title": "Senior Instrumentation Engineer | Benguerir (Maroc)",
+        "count": 1
+      },
+      {
+        "title": "Process Engineer | Benguerir (Maroc)",
+        "count": 1
+      },
+      {
+        "title": "Supply Chain Engineer | Fès (Maroc)",
+        "count": 1
+      }
+    ],
+    "description": "Cluster 4: Senior Instrumentation Engineer | Benguerir (Maroc)"
+  },
+  "0": {
+    "size": 2,
+    "top_skills": [
+      {
+        "skill": "Jenkins",
+        "count": 2
+      },
+      {
+        "skill": "Ansible",
+        "count": 2
+      },
+      {
+        "skill": "GCP",
+        "count": 2
+      },
+      {
+        "skill": "Prometheus",
+        "count": 2
+      },
+      {
+        "skill": "Shell",
+        "count": 2
+      },
+      {
+        "skill": "AWS",
+        "count": 2
+      },
+      {
+        "skill": "PostgreSQL",
+        "count": 2
+      },
+      {
+        "skill": "Docker",
+        "count": 2
+      },
+      {
+        "skill": "Kubernetes",
+        "count": 2
+      },
+      {
+        "skill": "Redis",
+        "count": 2
+      }
+    ],
+    "top_titles": [
+      {
+        "title": "Ingénieur DevOps Sénior (H/F) | Casablanca (Maroc)",
+        "count": 1
+      },
+      {
+        "title": "Ingénieur de production DevOps (H/F) | Casablanca (Maroc)",
+        "count": 1
+      }
+    ],
+    "description": "Cluster 0: Ingénieur DevOps Sénior (H/F) | Casablanca (Maroc)"
+  },
+  "3": {
+    "size": 2,
+    "top_skills": [
+      {
+        "skill": "Sql",
+        "count": 2
+      }
+    ],
+    "top_titles": [
+      {
+        "title": "Développeur ERP SAGE X3 | Casablanca (Maroc)",
+        "count": 1
+      },
+      {
+        "title": "Node.JS Developer | Casablanca (Maroc)",
+        "count": 1
+      }
+    ],
+    "description": "Cluster 3: Développeur ERP SAGE X3 | Casablanca (Maroc)"
+  }
+}
